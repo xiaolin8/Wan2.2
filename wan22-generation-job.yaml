@@ -1,0 +1,62 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: wan22-generation-job
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      hostIPC: true
+      containers:
+        - name: wan22-worker
+          image: 172.31.0.182/system_containers/wan2-2:1014
+          env:
+            - name: NPROC_PER_NODE
+              value: "4"
+            - name: TASK
+              value: "t2v-A14B"
+            - name: VIDEO_SIZE
+              value: "832*480"
+            - name: MODEL_NAME
+              value: "Wan2.2-T2V-A14B"
+            - name: PROMPT
+              value: "A 15-second cinematic video of an astronaut walking on Mars and discovering a giant stone tablet engraved with 'TenxCloud'."
+            - name: OUTPUT_FILENAME
+              value: "tenxcloud-from-k8s.mp4"
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              set -ex
+              torchrun --nproc_per_node=$(NPROC_PER_NODE) generate.py \
+                --task $(TASK) \
+                --size $(VIDEO_SIZE) \
+                --ckpt_dir /models/$(MODEL_NAME) \
+                --ulysses_size $(NPROC_PER_NODE) \
+                --prompt "$(PROMPT)" \
+                --save_file /workspace/outputs/$(OUTPUT_FILENAME)
+          resources:
+            limits:
+              nvidia.com/gpu: "4"
+            requests:
+              nvidia.com/gpu: "4"
+          securityContext:
+            capabilities:
+              add:
+                - "IPC_LOCK"
+          volumeMounts:
+            - name: model-storage
+              mountPath: /models
+            - name: output-storage
+              mountPath: /workspace/outputs
+      volumes:
+        - name: model-storage
+          hostPath:
+            path: /root/wan
+            type: Directory
+        - name: output-storage
+          hostPath:
+            path: /data/Wan-AI/output
+            type: Directory
+      restartPolicy: OnFailure
+      nodeSelector:
+          "kubernetes.io/hostname": "bjdb-h20-node-080"

@@ -1,0 +1,92 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    batch.kubernetes.io/job-name: wan22-generation-job
+    job-name: wan22-generation-job
+  name: wan22-generation-job
+  namespace: hu
+spec:
+  backoffLimit: 1
+  completionMode: NonIndexed
+  completions: 1
+  manualSelector: false
+  parallelism: 1
+  podReplacementPolicy: TerminatingOrFailed
+  suspend: false
+  template:
+    metadata:
+      labels:
+        batch.kubernetes.io/job-name: wan22-generation-job
+        job-name: wan22-generation-job
+    spec:
+      containers:
+      - args:
+        - |
+          set -ex
+          torchrun --nproc_per_node=$(NPROC_PER_NODE) generate.py \
+            --task $(TASK) \
+            --size $(VIDEO_SIZE) \
+            --ckpt_dir /models/$(MODEL_NAME) \
+            --ulysses_size $(NPROC_PER_NODE) \
+            --prompt "$(PROMPT)" \
+            --save_file /workspace/outputs/$(date '+%Y%m%d%H%M%S')-$(OUTPUT_FILENAME) \
+            --sample_guide_scale 10 \
+            --offload_model True \
+            --t5_cpu \
+            --dit_fsdp \
+            --t5_fsdp
+        command:
+        - /bin/sh
+        - -c
+        env:
+        - name: NPROC_PER_NODE
+          value: "4"
+        - name: TASK
+          value: t2v-A14B
+        - name: VIDEO_SIZE
+          value: 832*480
+        - name: MODEL_NAME
+          value: Wan2.2-T2V-A14B
+        - name: PROMPT
+          value: A 15-second cinematic video of an astronaut walking on Mars and discovering
+            a giant stone engraved with 'TenxCloud'.
+        - name: OUTPUT_FILENAME
+          value: tenxcloud-from-k8s.mp4
+        image: 172.31.0.182/system_containers/wan2-2:1014
+        imagePullPolicy: IfNotPresent
+        name: wan22-worker
+        resources:
+          limits:
+            memory: 128Gi
+            nvidia.com/gpu: "4"
+            nvidia.com/gpumem: 64k
+          requests:
+            memory: 128Gi
+            nvidia.com/gpu: "4"
+            nvidia.com/gpumem: 64k
+        securityContext:
+          capabilities:
+            add:
+            - IPC_LOCK
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /models
+          name: model-storage
+        - mountPath: /workspace/outputs
+          name: output-storage
+      dnsPolicy: ClusterFirst
+      restartPolicy: OnFailure
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /data/Wan-AI
+          type: Directory
+        name: model-storage
+      - hostPath:
+          path: /data/Wan-AI/output
+          type: Directory
+        name: output-storage
