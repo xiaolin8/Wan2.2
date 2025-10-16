@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone repository
-RUN git clone https://ghfast.top/https://github.com/Wan-Video/Wan2.2.git .
+RUN git clone https://ghfast.top/https://github.com/xiaolin8/Wan2.2.git .
 
 # Upgrade pip and setuptools to latest
 RUN pip install --upgrade pip setuptools wheel
@@ -32,8 +32,7 @@ RUN pip install flash-attn --no-build-isolation
 # Install decord and librosa peft
 RUN pip install decord librosa peft
 
+RUN pip install "ray[default]==2.10.0"
+
 # Set work directory (optional)
 WORKDIR /workspace
-
-# Default to interactive shell
-CMD ["/bin/bash"]
