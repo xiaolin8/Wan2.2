@@ -19,7 +19,7 @@ spec:
   # 任务完成后，自动删除 Ray 集群
   shutdownAfterJobFinishes: true
   rayClusterSpec:
-    rayVersion: '2.9.0' # 最好指定 Ray 的版本
+    rayVersion: '2.10.0' # 最好指定 Ray 的版本
     headGroupSpec:
       rayStartParams:
         dashboard-host: '0.0.0.0'
@@ -27,12 +27,15 @@ spec:
         spec:
           containers:
             - name: ray-head
-              image: 172.31.0.182/system_containers/wan2-2:1014-ray
+              image: 172.31.0.182/system_containers/wan22:1016-ray
               imagePullPolicy: Always
               ports:
-                - containerPort: 6379
-                - containerPort: 8265
-                - containerPort: 10001
+                - name: gcs-server
+                  containerPort: 6379
+                - name: dashboard
+                  containerPort: 8265
+                - name: client
+                  containerPort: 10001
               resources:
                 limits:
                   cpu: "2"
@@ -40,11 +43,6 @@ spec:
                 requests:
                   cpu: "2"
                   memory: "8Gi"
-              volumeMounts:
-                - mountPath: /models
-                  name: model-storage
-                - mountPath: /workspace/outputs
-                  name: output-storage
           volumes:
             - name: model-storage
               hostPath:
@@ -67,7 +65,7 @@ spec:
                 effect: "NoSchedule"
             containers:
               - name: ray-worker
-                image: 172.31.0.182/system_containers/wan2-2:1014-ray
+                image: 172.31.0.182/system_containers/wan22:1016-ray
                 imagePullPolicy: Always
                 resources:
                   limits:
@@ -76,15 +74,6 @@ spec:
                   requests:
                     memory: 128Gi
                     nvidia.com/gpu: "4"
-                securityContext:
-                  capabilities:
-                    add:
-                      - IPC_LOCK
-                volumeMounts:
-                  - mountPath: /models
-                    name: model-storage
-                  - mountPath: /workspace/outputs
-                    name: output-storage
             volumes:
               - name: model-storage
                 hostPath:

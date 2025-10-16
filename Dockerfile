@@ -34,5 +34,5 @@ RUN pip install decord librosa peft
 
 RUN pip install "ray[default]==2.10.0"
 
-# Set work directory (optional)
-WORKDIR /workspace
+# Set work directory
+WORKDIR /
