@@ -8,16 +8,18 @@ spec:
       --task "t2v-A14B"
       --size "832*480"
       --ckpt_dir /models/Wan2.2-T2V-A14B
-      --prompt "A cinematic video of an astronaut walking on Mars and discovering a giant stone engraved with 'TenxCloud'."
+      --ulysses_size 4
+      --prompt "A 15-second cinematic video of an astronaut walking on Mars and discovering a giant stone engraved with 'TenxCloud'."
       --save_file /workspace/outputs/$(date '+%Y%m%d%H%M%S')-tenxcloud-from-ray.mp4
       --num-workers 4
+      --sample_guide_scale 10
       --offload_model True
       --t5_cpu
       --dit_fsdp
       --t5_fsdp
 
   # 任务完成后，自动删除 Ray 集群
-  shutdownAfterJobFinishes: true
+  shutdownAfterJobFinishes: false
   rayClusterSpec:
     rayVersion: '2.10.0' # 最好指定 Ray 的版本
     headGroupSpec:
@@ -38,11 +40,16 @@ spec:
                   containerPort: 10001
               resources:
                 limits:
-                  cpu: "2"
-                  memory: "8Gi"
+                  cpu: "20"
+                  memory: "100Gi"
                 requests:
                   cpu: "2"
-                  memory: "8Gi"
+                  memory: "16Gi"
+              volumeMounts:
+                - name: model-storage
+                  mountPath: /models
+                - name: output-storage
+                  mountPath: /workspace/outputs
           volumes:
             - name: model-storage
               hostPath:
@@ -52,6 +59,36 @@ spec:
                 path: /data/Wan-AI/output
 
     workerGroupSpecs:
+      - replicas: 1
+        minReplicas: 1
+        maxReplicas: 1
+        groupName: cpu-worker-group
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+              - name: ray-worker
+                image: 172.31.0.182/system_containers/wan22:1016-ray
+                imagePullPolicy: Always
+                resources:
+                  limits:
+                    cpu: "20"
+                    memory: "100Gi"
+                  requests:
+                    cpu: "2"
+                    memory: "8Gi"
+                volumeMounts:
+                  - name: model-storage
+                    mountPath: /models
+                  - name: output-storage
+                    mountPath: /workspace/outputs
+            volumes:
+              - name: model-storage
+                hostPath:
+                  path: /data/Wan-AI
+              - name: output-storage
+                hostPath:
+                  path: /data/Wan-AI/output
       - replicas: 1
         minReplicas: 1
         maxReplicas: 1
@@ -71,9 +108,20 @@ spec:
                   limits:
                     memory: 128Gi
                     nvidia.com/gpu: "4"
+                    nvidia.com/gpumem: 64k
                   requests:
                     memory: 128Gi
                     nvidia.com/gpu: "4"
+                    nvidia.com/gpumem: 64k
+                securityContext:
+                  capabilities:
+                    add:
+                    - IPC_LOCK
+                volumeMounts:
+                  - name: model-storage
+                    mountPath: /models
+                  - name: output-storage
+                    mountPath: /workspace/outputs
             volumes:
               - name: model-storage
                 hostPath:

@@ -5,6 +5,7 @@ import os
 import sys
 import warnings
 from datetime import datetime
+import uuid
 
 warnings.filterwarnings('ignore')
 
@@ -318,10 +319,10 @@ def _init_logging(rank):
 
 
 @ray.remote(num_gpus=1)
-def generate_on_worker(args, rank):
+def generate_on_worker(args, rank, rendezvous_file):
     os.environ["RANK"] = str(rank)
     os.environ["WORLD_SIZE"] = str(args.num_workers)
-    os.environ["LOCAL_RANK"] = "0"
+    os.environ["LOCAL_RANK"] = str(rank)
     
     _init_logging(rank)
 
@@ -333,7 +334,7 @@ def generate_on_worker(args, rank):
         torch.cuda.set_device(0)
         dist.init_process_group(
             backend="nccl",
-            init_method="env://",
+            init_method=f"file://{rendezvous_file}",
             rank=rank,
             world_size=args.num_workers)
     else:
@@ -373,7 +374,7 @@ def generate_on_worker(args, rank):
 
     if dist.is_initialized():
         base_seed = [args.base_seed] if rank == 0 else [None]
-        dist.broadcast_object_list(base_seed, src=0, device=torch.device("cpu"))
+        dist.broadcast_object_list(base_seed, src=0, device=torch.device("cuda"))
         args.base_seed = base_seed[0]
 
     logging.info(f"Input prompt: {args.prompt}")
@@ -402,7 +403,7 @@ def generate_on_worker(args, rank):
         else:
             input_prompt = [None]
         if dist.is_initialized():
-            dist.broadcast_object_list(input_prompt, src=0, device=torch.device("cpu"))
+            dist.broadcast_object_list(input_prompt, src=0, device=torch.device("cuda"))
         args.prompt = input_prompt[0]
         logging.info(f"Extended prompt: {args.prompt}")
 
@@ -577,13 +578,11 @@ def main():
     if not ray.is_initialized():
         ray.init(address='auto')
 
-    master_addr = os.getenv("MASTER_ADDR", "localhost")
-    master_port = os.getenv("MASTER_PORT", "29500")
-    os.environ["MASTER_ADDR"] = ray.get_node_info()['node_ip_address']
-    os.environ["MASTER_PORT"] = "29500"
+    # Use file-based rendezvous to avoid network issues in K8s
+    rendezvous_file = f"/workspace/outputs/torch_rendezvous_{uuid.uuid4()}"
 
     # Create a remote worker for each GPU
-    workers = [generate_on_worker.remote(args, i) for i in range(args.num_workers)]
+    workers = [generate_on_worker.remote(args, i, rendezvous_file) for i in range(args.num_workers)]
     
     # Wait for all workers to finish
     results = ray.get(workers)

@@ -34,5 +34,8 @@ RUN pip install decord librosa peft
 
 RUN pip install "ray[default]==2.10.0"
 
+# Install the project itself in editable mode
+RUN pip install -e .
+
 # Set work directory
 WORKDIR /
