@@ -3,20 +3,7 @@ kind: RayJob
 metadata:
   name: wan22-generation-rayjob
 spec:
-  entrypoint: >-
-    python generate_ray.py
-      --task "t2v-A14B"
-      --size "832*480"
-      --ckpt_dir /models/Wan2.2-T2V-A14B
-      --ulysses_size 4
-      --prompt "A 15-second cinematic video of an astronaut walking on Mars and discovering a giant stone engraved with 'TenxCloud'."
-      --save_file /workspace/outputs/$(date '+%Y%m%d%H%M%S')-tenxcloud-from-ray.mp4
-      --num-workers 4
-      --sample_guide_scale 10
-      --offload_model True
-      --t5_cpu
-      --dit_fsdp
-      --t5_fsdp
+  entrypoint: "python generate_ray.py --task \"t2v-A14B\" --size \"832*480\" --ckpt_dir /models/Wan2.2-T2V-A14B --ulysses_size 4 --prompt \"A 15-second cinematic video of an astronaut walking on Mars and discovering a giant stone engraved with 'TenxCloud'.\" --save_file /workspace/outputs/$(date '+%Y%m%d%H%M%S')-tenxcloud-from-ray.mp4 --num-workers 4 --sample_guide_scale 10 --offload_model True --t5_cpu --dit_fsdp"
 
   # 任务完成后，自动删除 Ray 集群
   shutdownAfterJobFinishes: false
@@ -40,10 +27,8 @@ spec:
                   containerPort: 10001
               resources:
                 limits:
-                  cpu: "20"
-                  memory: "100Gi"
+                  memory: "256Gi"
                 requests:
-                  cpu: "2"
                   memory: "16Gi"
               volumeMounts:
                 - name: model-storage
@@ -72,11 +57,9 @@ spec:
                 imagePullPolicy: Always
                 resources:
                   limits:
-                    cpu: "20"
-                    memory: "100Gi"
+                    memory: "256Gi"
                   requests:
-                    cpu: "2"
-                    memory: "8Gi"
+                    memory: "32Gi"
                 volumeMounts:
                   - name: model-storage
                     mountPath: /models
