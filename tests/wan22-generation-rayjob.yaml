@@ -81,12 +81,12 @@ spec:
             resources:
               limits:
                 memory: 128Gi
-                nvidia.com/gpu: "2"
+                nvidia.com/gpu: "1"
                 nvidia.com/gpumem: 32k
                 t7d.com/rdma: "1"
               requests:
                 memory: 32Gi
-                nvidia.com/gpu: "2"
+                nvidia.com/gpu: "1"
                 nvidia.com/gpumem: 32k
                 t7d.com/rdma: "1"
             securityContext:
