@@ -6,9 +6,9 @@ spec:
   backoffLimit: 0
   shutdownAfterJobFinishes: true
   entrypoint: python generate_ray.py --task "t2v-A14B" --size "832*480" --ckpt_dir
-    /models/Wan2.2-T2V-A14B --ulysses_size 4 --prompt "A cinematic video. An astronaut in a white spacesuit walks cautiously on the red, dusty surface of Mars. The camera follows the astronaut from behind in a tracking shot. The astronaut stops and looks up in surprise at a giant, dark rock. The camera tilts up to reveal the word "tenxcloud" clearly engraved on the rock's surface. The scene is realistic, with a desolate Martian landscape and a faint sun in the background, creating a sense of mystery and discovery."
+    /models/Wan2.2-T2V-A14B --ulysses_size 2 --prompt "A cinematic video. An astronaut in a white spacesuit walks cautiously on the red, dusty surface of Mars. The camera follows the astronaut from behind in a tracking shot. The astronaut stops and looks up in surprise at a giant, dark rock. The camera tilts up to reveal the word "tenxcloud" clearly engraved on the rock's surface. The scene is realistic, with a desolate Martian landscape and a faint sun in the background, creating a sense of mystery and discovery."
     --save_file /workspace/outputs/$(date '+%Y%m%d%H%M%S')-tenxcloud-from-ray.mp4
-    --num-workers 4 --sample_guide_scale 10 --convert_model_dtype --offload_model True --t5_cpu --dit_fsdp
+    --num-workers 2 --sample_guide_scale 10 --convert_model_dtype --offload_model True --t5_cpu --dit_fsdp
   rayClusterSpec:
     headGroupSpec:
       rayStartParams:
@@ -55,7 +55,6 @@ spec:
     - groupName: worker-group
       maxReplicas: 2
       minReplicas: 2
-      numOfHosts: 2
       rayStartParams: {}
       replicas: 2
       scaleStrategy: {}
@@ -70,7 +69,7 @@ spec:
                       - key: ray.io/group
                         operator: In
                         values:
-                          - gpu-worker-group
+                          - worker-group
                   topologyKey: kubernetes.io/hostname
           containers:
           - image: 172.31.0.182/system_containers/wan22:1016-ray
@@ -82,13 +81,13 @@ spec:
             resources:
               limits:
                 memory: 128Gi
-                nvidia.com/gpu: "4"
-                nvidia.com/gpumem: 64k
-                t7d.com/rdma: "2"
+                nvidia.com/gpu: "2"
+                nvidia.com/gpumem: 32k
+                t7d.com/rdma: "1"
               requests:
-                memory: 128Gi
-                nvidia.com/gpu: "4"
-                nvidia.com/gpumem: 64k
+                memory: 32Gi
+                nvidia.com/gpu: "2"
+                nvidia.com/gpumem: 32k
                 t7d.com/rdma: "1"
             securityContext:
               capabilities:
