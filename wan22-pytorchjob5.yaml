@@ -1,7 +1,7 @@
 apiVersion: "kubeflow.org/v1"
 kind: PyTorchJob
 metadata:
-  name: wan22-t2v-distributed5
+  name: wan22-t2v-distributed-rdma5
 spec:
   runPolicy:
     cleanPodPolicy: None # 可选值: All, Running, None. All 表示任务结束后清理所有 Pod
@@ -28,6 +28,8 @@ spec:
                 - "/data/Wan2.2-T2V-A14B"
                 - "--dit_fsdp"
                 - "--t5_fsdp"
+                - "--convert_model_dtype"
+                - "True"
                 - "--ulysses_size"
                 - "10"
                 - "--sample_guide_scale"
@@ -42,6 +44,7 @@ spec:
                 limits:
                   memory: 256Gi
                   nvidia.com/gpu: "8"
+                  t7d.com/rdma: "1"
               env:
               - name: NVIDIA_VISIBLE_DEVICES
                 value: "all"
@@ -85,6 +88,8 @@ spec:
                 - "/data/Wan2.2-T2V-A14B"
                 - "--dit_fsdp"
                 - "--t5_fsdp"
+                - "--convert_model_dtype"
+                - "True"
                 - "--ulysses_size"
                 - "10"
                 - "--sample_guide_scale"
@@ -99,6 +104,7 @@ spec:
                 limits:
                   memory: 256Gi
                   nvidia.com/gpu: "5"
+                  t7d.com/rdma: "1"
               env:
               - name: NVIDIA_VISIBLE_DEVICES
                 value: "all"
