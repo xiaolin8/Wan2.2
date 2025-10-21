@@ -367,7 +367,7 @@ def generate(args):
 
     if dist.is_initialized():
         base_seed = [args.base_seed] if rank == 0 else [None]
-        dist.broadcast_object_list(base_seed, src=0, device=torch.device("cpu"))
+        dist.broadcast_object_list(base_seed, src=0)
         args.base_seed = base_seed[0]
 
     logging.info(f"Input prompt: {args.prompt}")
