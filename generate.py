@@ -396,7 +396,7 @@ def generate(args):
         else:
             input_prompt = [None]
         if dist.is_initialized():
-            dist.broadcast_object_list(input_prompt, src=0, device=torch.device("cpu"))
+            dist.broadcast_object_list(input_prompt, src=0)
         args.prompt = input_prompt[0]
         logging.info(f"Extended prompt: {args.prompt}")
 
