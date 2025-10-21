@@ -305,11 +305,11 @@ def _init_logging(rank):
     if rank == 0:
         # set format
         logging.basicConfig(
-            level=logging.INFO,
+            level=logging.DEBUG,
             format="[%(asctime)s] %(levelname)s: %(message)s",
             handlers=[logging.StreamHandler(stream=sys.stdout)])
     else:
-        logging.basicConfig(level=logging.ERROR)
+        logging.basicConfig(level=logging.DEBUG)
 
 
 def generate(args):

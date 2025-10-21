@@ -15,7 +15,7 @@ spec:
             gpu: "on"
           containers:
             - name: pytorch
-              image: 172.31.0.182/system_containers/wan2-2:1014
+              image: 172.31.0.182/system_containers/wan22:pytorch
               command:
                 - "torchrun"
               args:
@@ -73,7 +73,7 @@ spec:
             gpu: "on"
           containers:
             - name: pytorch
-              image: 172.31.0.182/system_containers/wan2-2:1014
+              image: 172.31.0.182/system_containers/wan22:pytorch
               command:
                 - "torchrun"
                 - "--nproc_per_node=4"
