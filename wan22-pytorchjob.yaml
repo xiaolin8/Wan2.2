@@ -1,0 +1,116 @@
+apiVersion: "kubeflow.org/v1"
+kind: PyTorchJob
+metadata:
+  name: wan22-t2v-distributed
+spec:
+  runPolicy:
+    cleanPodPolicy: None # 可选值: All, Running, None. All 表示任务结束后清理所有 Pod
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        spec:
+          containers:
+            - name: pytorch
+              image: 172.31.0.182/system_containers/wan2-2:1014
+              command:
+                - "torchrun"
+              args:
+                - "--nproc_per_node=2"
+                - "generate.py"
+                - "--task"
+                - "t2v-A14B"
+                - "--size"
+                - "832*480"
+                - "--frame_num"
+                - "41"
+                - "--ckpt_dir"
+                - "/data/Wan2.2-T2V-A14B"
+                - "--dit_fsdp"
+                - "--t5_fsdp"
+                - "--ulysses_size"
+                - "4"
+                - "--sample_guide_scale"
+                - "10"
+                - "--prompt"
+                - "A cinematic video. An astronaut in a white spacesuit walks cautiously on the red, dusty surface of Mars. The camera follows the astronaut from behind in a tracking shot. The astronaut stops and looks up in surprise at a giant, dark rock. The camera tilts up to reveal the word \"tenxcloud\" clearly engraved on the rock's surface. The scene is realistic, with a desolate Martian landscape and a faint sun in the background, creating a sense of mystery and discovery."
+                - "--save_file"
+                - "/output/$(date '+%Y%m%d%H%M%S')-pytorchjob.mp4"
+              resources:
+                limits:
+                  memory: 256Gi
+                  nvidia.com/gpu: "2"
+                  nvidia.com/gpumem: 64k
+              volumeMounts:
+                - name: data-volume
+                  mountPath: /data/Wan2.2-T2V-A14B
+                - name: output-volume
+                  mountPath: /output
+                - name: dshm
+                  mountPath: /dev/shm
+          volumes:
+            - name: data-volume
+              hostPath:
+                path: /data/Wan-AI/Wan2.2-T2V-A14B
+            - name: output-volume
+              hostPath:
+                path: /data/Wan-AI/output
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 2Gi
+    Worker:
+      replicas: 1 # 1 个 Worker 节点 + 1 个 Master 节点 = 2 个总节点
+      restartPolicy: OnFailure
+      template:
+        spec:
+          containers:
+            - name: pytorch
+              image: 172.31.0.182/system_containers/wan2-2:1014
+              command:
+                - "torchrun"
+              args:
+                - "--nproc_per_node=2"
+                - "generate.py"
+                - "--task"
+                - "t2v-A14B"
+                - "--size"
+                - "832*480"
+                - "--frame_num"
+                - "41"
+                - "--ckpt_dir"
+                - "/data/Wan2.2-T2V-A14B"
+                - "--dit_fsdp"
+                - "--t5_fsdp"
+                - "--ulysses_size"
+                - "4"
+                - "--sample_guide_scale"
+                - "10"
+                - "--prompt"
+                - "A cinematic video. An astronaut in a white spacesuit walks cautiously on the red, dusty surface of Mars. The camera follows the astronaut from behind in a tracking shot. The astronaut stops and looks up in surprise at a giant, dark rock. The camera tilts up to reveal the word \"tenxcloud\" clearly engraved on the rock's surface. The scene is realistic, with a desolate Martian landscape and a faint sun in the background, creating a sense of mystery and discovery."
+                - "--save_file"
+                - "/output/$(date '+%Y%m%d%H%M%S')-pytorchjob.mp4"
+              resources:
+                limits:
+                  memory: 256Gi
+                  nvidia.com/gpu: "2"
+                  nvidia.com/gpumem: 64k
+              volumeMounts:
+                - name: data-volume
+                  mountPath: /data/Wan2.2-T2V-A14B
+                - name: output-volume
+                  mountPath: /output
+                - name: dshm
+                  mountPath: /dev/shm
+          volumes:
+            - name: data-volume
+              hostPath:
+                path: /data/Wan-AI/Wan2.2-T2V-A14B
+            - name: output-volume
+              hostPath:
+                path: /data/Wan-AI/output
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 2Gi

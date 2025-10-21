@@ -3,10 +3,9 @@ kind: RayJob
 metadata:
   name: wan22-generation-rayjob
 spec:
-  entrypoint: "python generate_ray.py --task \"t2v-A14B\" --size \"832*480\" --ckpt_dir /models/Wan2.2-T2V-A14B --ulysses_size 4 --prompt \"A 15-second cinematic video of an astronaut walking on Mars and discovering a giant stone engraved with 'TenxCloud'.\" --save_file /workspace/outputs/$(date '+%Y%m%d%H%M%S')-tenxcloud-from-ray.mp4 --num-workers 4 --sample_guide_scale 10 --offload_model True --t5_cpu --dit_fsdp"
-
+  entrypoint: python generate_ray.py --task \"t2v-A14B\" --size \"832*480\" --ckpt_dir /models/Wan2.2-T2V-A14B --ulysses_size 4 --prompt \"A 15-second cinematic video of an astronaut walking on Mars and discovering a giant stone engraved with 'TenxCloud'.\" --save_file /workspace/outputs/$(date '+%Y%m%d%H%M%S')-tenxcloud-from-ray.mp4 --num-workers 4 --sample_guide_scale 10 --convert_model_dtype --offload_model True --t5_cpu --dit_fsdp
   # 任务完成后，自动删除 Ray 集群
-  shutdownAfterJobFinishes: false
+  shutdownAfterJobFinishes: true
   rayClusterSpec:
     rayVersion: '2.10.0' # 最好指定 Ray 的版本
     headGroupSpec:
@@ -18,6 +17,9 @@ spec:
             - name: ray-head
               image: 172.31.0.182/system_containers/wan22:1016-ray
               imagePullPolicy: Always
+              env:
+                - name: PYTORCH_CUDA_ALLOC_CONF
+                  value: expandable_segments:True
               ports:
                 - name: gcs-server
                   containerPort: 6379
@@ -42,43 +44,24 @@ spec:
             - name: output-storage
               hostPath:
                 path: /data/Wan-AI/output
-
     workerGroupSpecs:
-      - replicas: 1
-        minReplicas: 1
-        maxReplicas: 1
-        groupName: cpu-worker-group
-        rayStartParams: {}
-        template:
-          spec:
-            containers:
-              - name: ray-worker
-                image: 172.31.0.182/system_containers/wan22:1016-ray
-                imagePullPolicy: Always
-                resources:
-                  limits:
-                    memory: "256Gi"
-                  requests:
-                    memory: "32Gi"
-                volumeMounts:
-                  - name: model-storage
-                    mountPath: /models
-                  - name: output-storage
-                    mountPath: /workspace/outputs
-            volumes:
-              - name: model-storage
-                hostPath:
-                  path: /data/Wan-AI
-              - name: output-storage
-                hostPath:
-                  path: /data/Wan-AI/output
-      - replicas: 1
-        minReplicas: 1
-        maxReplicas: 1
+      - replicas: 2
+        minReplicas: 2
+        maxReplicas: 2
         groupName: gpu-worker-group
         rayStartParams: {}
         template:
           spec:
+            affinity:
+              podAntiAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  - labelSelector:
+                      matchExpressions:
+                        - key: ray.io/group
+                          operator: In
+                          values:
+                            - gpu-worker-group
+                    topologyKey: kubernetes.io/hostname
             tolerations:
               - key: "nvidia.com/gpu"
                 operator: "Exists"
@@ -87,14 +70,17 @@ spec:
               - name: ray-worker
                 image: 172.31.0.182/system_containers/wan22:1016-ray
                 imagePullPolicy: Always
+                env:
+                  - name: PYTORCH_CUDA_ALLOC_CONF
+                    value: expandable_segments:True
                 resources:
                   limits:
                     memory: 128Gi
-                    nvidia.com/gpu: "4"
+                    nvidia.com/gpu: "2"
                     nvidia.com/gpumem: 64k
                   requests:
                     memory: 128Gi
-                    nvidia.com/gpu: "4"
+                    nvidia.com/gpu: "2"
                     nvidia.com/gpumem: 64k
                 securityContext:
                   capabilities:
