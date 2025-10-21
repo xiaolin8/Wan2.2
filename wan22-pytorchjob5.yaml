@@ -49,6 +49,8 @@ spec:
               env:
               - name: NVIDIA_VISIBLE_DEVICES
                 value: "all"
+              - name: NCCL_DEBUG
+                value: "INFO"
               volumeMounts:
                 - name: data-volume
                   mountPath: /data/Wan2.2-T2V-A14B
@@ -110,6 +112,8 @@ spec:
               env:
               - name: NVIDIA_VISIBLE_DEVICES
                 value: "all"
+              - name: NCCL_DEBUG
+                value: "INFO"
               volumeMounts:
                 - name: data-volume
                   mountPath: /data/Wan2.2-T2V-A14B
