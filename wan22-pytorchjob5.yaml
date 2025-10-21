@@ -34,14 +34,15 @@ spec:
                 - "10"
                 - "--sample_guide_scale"
                 - "10"
-                - "--offload_model"
-                - "True"
                 - "--prompt"
                 - "A cinematic video. An astronaut in a white spacesuit walks cautiously on the red, dusty surface of Mars. The camera follows the astronaut from behind in a tracking shot. The astronaut stops and looks up in surprise at a giant, dark rock. The camera tilts up to reveal the word \"tenxcloud\" clearly engraved on the rock's surface. The scene is realistic, with a desolate Martian landscape and a faint sun in the background, creating a sense of mystery and discovery."
                 - "--save_file"
                 - "/output/wan22-t2v-distributed5x2-rdma.mp4"
               resources:
+                requests:
+                  cpu: "4"
                 limits:
+                  cpu: "16"
                   memory: 256Gi
                   nvidia.com/gpu: "8"
                   t7d.com/rdma: "1"
@@ -94,14 +95,15 @@ spec:
                 - "10"
                 - "--sample_guide_scale"
                 - "10"
-                - "--offload_model"
-                - "True"
                 - "--prompt"
                 - "A cinematic video. An astronaut in a white spacesuit walks cautiously on the red, dusty surface of Mars. The camera follows the astronaut from behind in a tracking shot. The astronaut stops and looks up in surprise at a giant, dark rock. The camera tilts up to reveal the word \"tenxcloud\" clearly engraved on the rock's surface. The scene is realistic, with a desolate Martian landscape and a faint sun in the background, creating a sense of mystery and discovery."
                 - "--save_file"
                 - "/output/wan22-t2v-distributed5x2-rdma.mp4"
               resources:
+                requests:
+                  cpu: "4"
                 limits:
+                  cpu: "16"
                   memory: 256Gi
                   nvidia.com/gpu: "5"
                   t7d.com/rdma: "1"
