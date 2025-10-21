@@ -6,6 +6,7 @@ import sys
 import warnings
 from datetime import datetime
 import uuid
+import socket
 
 warnings.filterwarnings('ignore')
 
@@ -308,21 +309,22 @@ def _parse_args():
 
 def _init_logging(rank):
     # logging
-    if rank == 0:
-        # set format
-        logging.basicConfig(
-            level=logging.INFO,
-            format="[%(asctime)s] %(levelname)s: %(message)s",
-            handlers=[logging.StreamHandler(stream=sys.stdout)])
-    else:
-        logging.basicConfig(level=logging.ERROR)
+    log_level = logging.INFO if rank == 0 else logging.DEBUG
+    logging.basicConfig(
+        level=log_level,
+        format=f"[%(asctime)s][Rank {rank}] %(levelname)s: %(message)s",
+        handlers=[logging.StreamHandler(stream=sys.stdout)])
 
 
 @ray.remote(num_gpus=1)
-def generate_on_worker(args, rank, rendezvous_file):
+def generate_on_worker(args, rank, master_addr, master_port):
+    # Force disable Ulysses sequence parallelism to ensure balanced workload across workers
+    args.ulysses_size = 1
     os.environ["RANK"] = str(rank)
     os.environ["WORLD_SIZE"] = str(args.num_workers)
     os.environ["LOCAL_RANK"] = str(rank)
+    os.environ['MASTER_ADDR'] = master_addr
+    os.environ['MASTER_PORT'] = str(master_port)
     
     _init_logging(rank)
 
@@ -330,13 +332,26 @@ def generate_on_worker(args, rank, rendezvous_file):
         args.offload_model = False if args.num_workers > 1 else True
         logging.info(
             f"offload_model is not specified, set to {args.offload_model}.")
+            
     if args.num_workers > 1:
+        logging.info(f"Setting up distributed environment...")
+        logging.info(f"MASTER_ADDR: {master_addr}")
+        logging.info(f"MASTER_PORT: {master_port}")
+        logging.info(f"RANK: {rank}")
+        logging.info(f"WORLD_SIZE: {args.num_workers}")
+        
         torch.cuda.set_device(0)
         dist.init_process_group(
             backend="nccl",
-            init_method=f"file://{rendezvous_file}",
+            init_method="env://",
             rank=rank,
             world_size=args.num_workers)
+            
+        logging.info(f"Distributed environment set up successfully.")
+        logging.info(f"CUDA available: {torch.cuda.is_available()}")
+        current_gpu = torch.cuda.current_device()
+        logging.info(f"Current GPU: {current_gpu}")
+        logging.info(f"GPU Name: {torch.cuda.get_device_name(current_gpu)}")
     else:
         assert not (
             args.t5_fsdp or args.dit_fsdp
@@ -421,7 +436,7 @@ def generate_on_worker(args, rank, rendezvous_file):
             convert_model_dtype=args.convert_model_dtype,
         )
 
-        logging.info(f"Generating video ...")
+        logging.info(f"Starting video generation...")
         video = wan_t2v.generate(
             args.prompt,
             size=SIZE_CONFIGS[args.size],
@@ -432,6 +447,7 @@ def generate_on_worker(args, rank, rendezvous_file):
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
             offload_model=args.offload_model)
+        logging.info(f"Finished video generation.")
     elif "ti2v" in args.task:
         logging.info("Creating WanTI2V pipeline.")
         wan_ti2v = wan.WanTI2V(
@@ -446,7 +462,7 @@ def generate_on_worker(args, rank, rendezvous_file):
             convert_model_dtype=args.convert_model_dtype,
         )
 
-        logging.info(f"Generating video ...")
+        logging.info(f"Starting video generation...")
         video = wan_ti2v.generate(
             args.prompt,
             img=img,
@@ -459,6 +475,7 @@ def generate_on_worker(args, rank, rendezvous_file):
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
             offload_model=args.offload_model)
+        logging.info(f"Finished video generation.")
     elif "animate" in args.task:
         logging.info("Creating Wan-Animate pipeline.")
         wan_animate = wan.WanAnimate(
@@ -474,7 +491,7 @@ def generate_on_worker(args, rank, rendezvous_file):
             use_relighting_lora=args.use_relighting_lora
         )
 
-        logging.info(f"Generating video ...")
+        logging.info(f"Starting video generation...")
         video = wan_animate.generate(
             src_root_path=args.src_root_path,
             replace_flag=args.replace_flag,
@@ -486,6 +503,7 @@ def generate_on_worker(args, rank, rendezvous_file):
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
             offload_model=args.offload_model)
+        logging.info(f"Finished video generation.")
     elif "s2v" in args.task:
         logging.info("Creating WanS2V pipeline.")
         wan_s2v = wan.WanS2V(
@@ -499,7 +517,7 @@ def generate_on_worker(args, rank, rendezvous_file):
             t5_cpu=args.t5_cpu,
             convert_model_dtype=args.convert_model_dtype,
         )
-        logging.info(f"Generating video ...")
+        logging.info(f"Starting video generation...")
         video = wan_s2v.generate(
             input_prompt=args.prompt,
             ref_image_path=args.image,
@@ -520,6 +538,7 @@ def generate_on_worker(args, rank, rendezvous_file):
             offload_model=args.offload_model,
             init_first_frame=args.start_from_ref,
         )
+        logging.info(f"Finished video generation.")
     else:
         logging.info("Creating WanI2V pipeline.")
         wan_i2v = wan.WanI2V(
@@ -533,7 +552,7 @@ def generate_on_worker(args, rank, rendezvous_file):
             t5_cpu=args.t5_cpu,
             convert_model_dtype=args.convert_model_dtype,
         )
-        logging.info("Generating video ...")
+        logging.info(f"Starting video generation...")
         video = wan_i2v.generate(
             args.prompt,
             img,
@@ -545,6 +564,7 @@ def generate_on_worker(args, rank, rendezvous_file):
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
             offload_model=args.offload_model)
+        logging.info(f"Finished video generation.")
 
     if rank == 0:
         if args.save_file is None:
@@ -571,6 +591,14 @@ def generate_on_worker(args, rank, rendezvous_file):
     return video
 
 
+def get_free_port():
+    s = socket.socket()
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
+
 def main():
     args = _parse_args()
     
@@ -578,11 +606,16 @@ def main():
     if not ray.is_initialized():
         ray.init(address='auto')
 
-    # Use file-based rendezvous to avoid network issues in K8s
-    rendezvous_file = f"/workspace/outputs/torch_rendezvous_{uuid.uuid4()}"
+    # Get the head node's ClusterIP from the established Ray connection.
+    # This is the stable address we need for torch.distributed.
+    gcs_address = ray.get_runtime_context().gcs_address
+    master_addr = gcs_address.split(':')[0]
+    
+    # Find a free port on the driver pod for the rendezvous.
+    master_port = get_free_port()
 
     # Create a remote worker for each GPU
-    workers = [generate_on_worker.remote(args, i, rendezvous_file) for i in range(args.num_workers)]
+    workers = [generate_on_worker.remote(args, i, master_addr, master_port) for i in range(args.num_workers)]
     
     # Wait for all workers to finish
     results = ray.get(workers)

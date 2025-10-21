@@ -44,6 +44,7 @@ ps aux | grep generate.py
 ## 第三章：在各节点上执行分布式训练命令
 
 **重要配置:** 根据模型架构和报错日志，我们确认了两个关键限制：
+
 1.  `--ulysses_size` 必须等于总进程数 (`nnodes` * `nproc_per_node`)。
 2.  模型的注意力头数 `num_heads` (为 40) 必须能被 `--ulysses_size` 整除。
 

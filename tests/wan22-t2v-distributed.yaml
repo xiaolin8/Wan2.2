@@ -1,0 +1,142 @@
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  name: wan22-t2v-distributed
+  namespace: kubeflow
+spec:
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        metadata: {}
+        spec:
+          containers:
+          - args:
+            - --nproc_per_node=2
+            - generate.py
+            - --task
+            - t2v-A14B
+            - --size
+            - 832*480
+            - --ckpt_dir
+            - /data/Wan2.2-T2V-A14B
+            - --dit_fsdp
+            - --t5_fsdp
+            - --ulysses_size
+            - "4"
+            - --sample_guide_scale
+            - "10"
+            - --prompt
+            - A cinematic video. An astronaut in a white spacesuit walks cautiously
+              on the red, dusty surface of Mars. The camera follows the astronaut
+              from behind in a tracking shot. The astronaut stops and looks up in
+              surprise at a giant, dark rock. The camera tilts up to reveal the word
+              "tenxcloud" clearly engraved on the rock's surface. The scene is realistic,
+              with a desolate Martian landscape and a faint sun in the background,
+              creating a sense of mystery and discovery.
+            - --save_file
+            - /output/wan-pytorchjob.mp4
+            command:
+            - torchrun
+            image: 172.31.0.182/system_containers/wan2-2:1014
+            name: pytorch
+            resources:
+              limits:
+                nvidia.com/gpu: "2"
+                nvidia.com/gpumem: 64k
+            volumeMounts:
+            - mountPath: /data/Wan2.2-T2V-A14B
+              name: data-volume
+            - mountPath: /output
+              name: output-volume
+          volumes:
+          - hostPath:
+              path: /data/Wan-AI/Wan2.2-T2V-A14B
+            name: data-volume
+          - hostPath:
+              path: /data/Wan-AI/output
+            name: output-volume
+    Worker:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        metadata: {}
+        spec:
+          containers:
+          - args:
+            - --nproc_per_node=2
+            - generate.py
+            - --task
+            - t2v-A14B
+            - --size
+            - 832*480
+            - --ckpt_dir
+            - /data/Wan2.2-T2V-A14B
+            - --dit_fsdp
+            - --t5_fsdp
+            - --ulysses_size
+            - "4"
+            - --sample_guide_scale
+            - "10"
+            - --prompt
+            - A cinematic video. An astronaut in a white spacesuit walks cautiously
+              on the red, dusty surface of Mars. The camera follows the astronaut
+              from behind in a tracking shot. The astronaut stops and looks up in
+              surprise at a giant, dark rock. The camera tilts up to reveal the word
+              "tenxcloud" clearly engraved on the rock's surface. The scene is realistic,
+              with a desolate Martian landscape and a faint sun in the background,
+              creating a sense of mystery and discovery.
+            - --save_file
+            - /output/wan-pytorchjob.mp4
+            command:
+            - torchrun
+            image: 172.31.0.182/system_containers/wan2-2:1014
+            name: pytorch
+            resources:
+              limits:
+                nvidia.com/gpu: "2"
+                nvidia.com/gpumem: 64k
+            volumeMounts:
+            - mountPath: /data/Wan2.2-T2V-A14B
+              name: data-volume
+            - mountPath: /output
+              name: output-volume
+          volumes:
+          - hostPath:
+              path: /data/Wan-AI/Wan2.2-T2V-A14B
+            name: data-volume
+          - hostPath:
+              path: /data/Wan-AI/output
+            name: output-volume
+  runPolicy:
+    cleanPodPolicy: None
+    suspend: false
+status:
+  completionTime: "2025-10-21T03:34:05Z"
+  conditions:
+  - lastTransitionTime: "2025-10-21T02:56:38Z"
+    lastUpdateTime: "2025-10-21T02:56:38Z"
+    message: PyTorchJob wan22-t2v-distributed is created.
+    reason: PyTorchJobCreated
+    status: "True"
+    type: Created
+  - lastTransitionTime: "2025-10-21T02:56:43Z"
+    lastUpdateTime: "2025-10-21T02:56:43Z"
+    message: PyTorchJob wan22-t2v-distributed is running.
+    reason: PyTorchJobRunning
+    status: "False"
+    type: Running
+  - lastTransitionTime: "2025-10-21T03:34:05Z"
+    lastUpdateTime: "2025-10-21T03:34:05Z"
+    message: PyTorchJob wan22-t2v-distributed is successfully completed.
+    reason: PyTorchJobSucceeded
+    status: "True"
+    type: Succeeded
+  replicaStatuses:
+    Master:
+      selector: training.kubeflow.org/job-name=wan22-t2v-distributed,training.kubeflow.org/operator-name=pytorchjob-controller,training.kubeflow.org/replica-type=master
+      succeeded: 1
+    Worker:
+      succeeded: 1
+  startTime: "2025-10-21T02:56:38Z"

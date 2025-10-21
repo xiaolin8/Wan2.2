@@ -1,7 +1,7 @@
 apiVersion: "kubeflow.org/v1"
 kind: PyTorchJob
 metadata:
-  name: wan22-t2v-distributed4
+  name: wan22-t2v-distributed8
 spec:
   runPolicy:
     cleanPodPolicy: None # 可选值: All, Running, None. All 表示任务结束后清理所有 Pod
@@ -11,15 +11,13 @@ spec:
       restartPolicy: OnFailure
       template:
         spec:
-          nodeSelector:
-            gpu: "on"
           containers:
             - name: pytorch
               image: 172.31.0.182/system_containers/wan2-2:1014
               command:
                 - "torchrun"
               args:
-                - "--nproc_per_node=4"
+                - "--nproc_per_node=8"
                 - "generate.py"
                 - "--task"
                 - "t2v-A14B"
@@ -30,7 +28,7 @@ spec:
                 - "--dit_fsdp"
                 - "--t5_fsdp"
                 - "--ulysses_size"
-                - "8"
+                - "16"
                 - "--sample_guide_scale"
                 - "10"
                 - "--prompt"
@@ -39,13 +37,11 @@ spec:
                 - "/output/$(date '+%Y%m%d%H%M%S')-pytorchjob.mp4"
               resources:
                 limits:
-                  cpu: 16
-                  memory: 128Gi
-                  nvidia.com/gpu: "4"
-                requests:
-                  cpu: 8
-                  memory: 128Gi
-                  nvidia.com/gpu: "4"
+                  memory: 256Gi
+                  nvidia.com/gpu: "8"
+              env:
+              - name: NVIDIA_VISIBLE_DEVICES
+                value: "all"
               volumeMounts:
                 - name: data-volume
                   mountPath: /data/Wan2.2-T2V-A14B
@@ -69,14 +65,13 @@ spec:
       restartPolicy: OnFailure
       template:
         spec:
-          nodeSelector:
-            gpu: "on"
           containers:
             - name: pytorch
               image: 172.31.0.182/system_containers/wan2-2:1014
               command:
                 - "torchrun"
-                - "--nproc_per_node=4"
+              args:
+                - "--nproc_per_node=8"
                 - "generate.py"
                 - "--task"
                 - "t2v-A14B"
@@ -87,7 +82,7 @@ spec:
                 - "--dit_fsdp"
                 - "--t5_fsdp"
                 - "--ulysses_size"
-                - "8"
+                - "16"
                 - "--sample_guide_scale"
                 - "10"
                 - "--prompt"
@@ -96,13 +91,8 @@ spec:
                 - "/output/$(date '+%Y%m%d%H%M%S')-pytorchjob.mp4"
               resources:
                 limits:
-                  cpu: 16
-                  memory: 128Gi
-                  nvidia.com/gpu: "4"
-                requests:
-                  cpu: 8
-                  memory: 128Gi
-                  nvidia.com/gpu: "4"
+                  memory: 256Gi
+                  nvidia.com/gpu: "8"
               env:
               - name: NVIDIA_VISIBLE_DEVICES
                 value: "all"

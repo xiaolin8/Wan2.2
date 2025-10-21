@@ -1,11 +1,11 @@
 apiVersion: ray.io/v1
 kind: RayJob
 metadata:
-  name: wan22-generation-rayjob8
+  name: wan22-generation-rayjob-image
 spec:
   backoffLimit: 0
   shutdownAfterJobFinishes: true
-  entrypoint: python generate_ray.py --task "t2v-A14B" --size "832*480" --ckpt_dir
+  entrypoint: python generate_ray.py --task "i2v-A14B" --size "832*480" --ckpt_dir
     /models/Wan2.2-T2V-A14B --ulysses_size 8 --prompt "A cinematic video. An astronaut in a white spacesuit walks cautiously on the red, dusty surface of Moon. The camera follows the astronaut from behind in a tracking shot. The astronaut stops and looks up in surprise at a giant, dark rock. The camera tilts up to reveal the word "tenxcloud" clearly engraved on the rock's surface. The scene is realistic, with a desolate Martian landscape and a faint sun in the background, creating a sense of mystery and discovery."
     --save_file /workspace/outputs/$(date '+%Y%m%d%H%M%S')-tenxcloud-from-ray.mp4
     --num-workers 8 --sample_guide_scale 10 --convert_model_dtype --offload_model True --t5_cpu --dit_fsdp
