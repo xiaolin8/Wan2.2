@@ -77,11 +77,9 @@ spec:
                   limits:
                     memory: 128Gi
                     nvidia.com/gpu: "2"
-                    nvidia.com/gpumem: 64k
                   requests:
                     memory: 128Gi
                     nvidia.com/gpu: "2"
-                    nvidia.com/gpumem: 64k
                 securityContext:
                   capabilities:
                     add:
