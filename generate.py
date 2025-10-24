@@ -10,8 +10,10 @@ warnings.filterwarnings('ignore')
 
 import random
 
+import boto3
 import torch
 import torch.distributed as dist
+from botocore.exceptions import NoCredentialsError
 from PIL import Image
 
 import wan
@@ -20,21 +22,19 @@ from wan.distributed.util import init_distributed_group
 from wan.utils.prompt_extend import DashScopePromptExpander, QwenPromptExpander
 from wan.utils.utils import merge_video_audio, save_video, str2bool
 
-
 EXAMPLE_PROMPT = {
     "t2v-A14B": {
         "prompt":
-            "Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage.",
+        "Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage.",
     },
     "i2v-A14B": {
         "prompt":
-            "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard. The fluffy-furred feline gazes directly at the camera with a relaxed expression. Blurred beach scenery forms the background featuring crystal-clear waters, distant green hills, and a blue sky dotted with white clouds. The cat assumes a naturally relaxed posture, as if savoring the sea breeze and warm sunlight. A close-up shot highlights the feline's intricate details and the refreshing atmosphere of the seaside.",
-        "image":
-            "examples/i2v_input.JPG",
+        "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard. The fluffy-furred feline gazes directly at the camera with a relaxed expression. Blurred beach scenery forms the background featuring crystal-clear waters, distant green hills, and a blue sky dotted with white clouds. The cat assumes a naturally relaxed posture, as if savoring the sea breeze and warm sunlight. A close-up shot highlights the feline's intricate details and the refreshing atmosphere of the seaside.",
+        "image": "examples/i2v_input.JPG",
     },
     "ti2v-5B": {
         "prompt":
-            "Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage.",
+        "Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage.",
     },
     "animate-14B": {
         "prompt": "视频中的人在做动作",
@@ -44,17 +44,13 @@ EXAMPLE_PROMPT = {
     },
     "s2v-14B": {
         "prompt":
-            "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard. The fluffy-furred feline gazes directly at the camera with a relaxed expression. Blurred beach scenery forms the background featuring crystal-clear waters, distant green hills, and a blue sky dotted with white clouds. The cat assumes a naturally relaxed posture, as if savoring the sea breeze and warm sunlight. A close-up shot highlights the feline's intricate details and the refreshing atmosphere of the seaside.",
-        "image":
-            "examples/i2v_input.JPG",
-        "audio":
-            "examples/talk.wav",
-        "tts_prompt_audio":
-            "examples/zero_shot_prompt.wav",
-        "tts_prompt_text":
-            "希望你以后能够做的比我还好呦。",
+        "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard. The fluffy-furred feline gazes directly at the camera with a relaxed expression. Blurred beach scenery forms the background featuring crystal-clear waters, distant green hills, and a blue sky dotted with white clouds. The cat assumes a naturally relaxed posture, as if savoring the sea breeze and warm sunlight. A close-up shot highlights the feline's intricate details and the refreshing atmosphere of the seaside.",
+        "image": "examples/i2v_input.JPG",
+        "audio": "examples/talk.wav",
+        "tts_prompt_audio": "examples/zero_shot_prompt.wav",
+        "tts_prompt_text": "希望你以后能够做的比我还好呦。",
         "tts_text":
-            "收到好友从远方寄来的生日礼物，那份意外的惊喜与深深的祝福让我心中充满了甜蜜的快乐，笑容如花儿般绽放。"
+        "收到好友从远方寄来的生日礼物，那份意外的惊喜与深深的祝福让我心中充满了甜蜜的快乐，笑容如花儿般绽放。"
     },
 }
 
@@ -69,9 +65,11 @@ def _validate_args(args):
         args.prompt = EXAMPLE_PROMPT[args.task]["prompt"]
     if args.image is None and "image" in EXAMPLE_PROMPT[args.task]:
         args.image = EXAMPLE_PROMPT[args.task]["image"]
-    if args.audio is None and args.enable_tts is False and "audio" in EXAMPLE_PROMPT[args.task]:
+    if args.audio is None and args.enable_tts is False and "audio" in EXAMPLE_PROMPT[
+            args.task]:
         args.audio = EXAMPLE_PROMPT[args.task]["audio"]
-    if (args.tts_prompt_audio is None or args.tts_text is None) and args.enable_tts is True and "audio" in EXAMPLE_PROMPT[args.task]:
+    if (args.tts_prompt_audio is None or args.tts_text is None
+        ) and args.enable_tts is True and "audio" in EXAMPLE_PROMPT[args.task]:
         args.tts_prompt_audio = EXAMPLE_PROMPT[args.task]["tts_prompt_audio"]
         args.tts_prompt_text = EXAMPLE_PROMPT[args.task]["tts_prompt_text"]
         args.tts_text = EXAMPLE_PROMPT[args.task]["tts_text"]
@@ -104,123 +102,109 @@ def _validate_args(args):
 
 def _parse_args():
     parser = argparse.ArgumentParser(
-        description="Generate a image or video from a text prompt or image using Wan"
-    )
-    parser.add_argument(
-        "--task",
-        type=str,
-        default="t2v-A14B",
-        choices=list(WAN_CONFIGS.keys()),
-        help="The task to run.")
+        description=
+        "Generate a image or video from a text prompt or image using Wan")
+    parser.add_argument("--task",
+                        type=str,
+                        default="t2v-A14B",
+                        choices=list(WAN_CONFIGS.keys()),
+                        help="The task to run.")
     parser.add_argument(
         "--size",
         type=str,
         default="1280*720",
         choices=list(SIZE_CONFIGS.keys()),
-        help="The area (width*height) of the generated video. For the I2V task, the aspect ratio of the output video will follow that of the input image."
+        help=
+        "The area (width*height) of the generated video. For the I2V task, the aspect ratio of the output video will follow that of the input image."
     )
     parser.add_argument(
         "--frame_num",
         type=int,
         default=None,
-        help="How many frames of video are generated. The number should be 4n+1"
-    )
-    parser.add_argument(
-        "--ckpt_dir",
-        type=str,
-        default=None,
-        help="The path to the checkpoint directory.")
+        help="How many frames of video are generated. The number should be 4n+1")
+    parser.add_argument("--ckpt_dir",
+                        type=str,
+                        default=None,
+                        help="The path to the checkpoint directory.")
     parser.add_argument(
         "--offload_model",
         type=str2bool,
         default=None,
-        help="Whether to offload the model to CPU after each model forward, reducing GPU memory usage."
+        help=
+        "Whether to offload the model to CPU after each model forward, reducing GPU memory usage."
     )
-    parser.add_argument(
-        "--ulysses_size",
-        type=int,
-        default=1,
-        help="The size of the ulysses parallelism in DiT.")
-    parser.add_argument(
-        "--t5_fsdp",
-        action="store_true",
-        default=False,
-        help="Whether to use FSDP for T5.")
-    parser.add_argument(
-        "--t5_cpu",
-        action="store_true",
-        default=False,
-        help="Whether to place T5 model on CPU.")
-    parser.add_argument(
-        "--dit_fsdp",
-        action="store_true",
-        default=False,
-        help="Whether to use FSDP for DiT.")
-    parser.add_argument(
-        "--save_file",
-        type=str,
-        default=None,
-        help="The file to save the generated video to.")
-    parser.add_argument(
-        "--prompt",
-        type=str,
-        default=None,
-        help="The prompt to generate the video from.")
-    parser.add_argument(
-        "--use_prompt_extend",
-        action="store_true",
-        default=False,
-        help="Whether to use prompt extend.")
-    parser.add_argument(
-        "--prompt_extend_method",
-        type=str,
-        default="local_qwen",
-        choices=["dashscope", "local_qwen"],
-        help="The prompt extend method to use.")
-    parser.add_argument(
-        "--prompt_extend_model",
-        type=str,
-        default=None,
-        help="The prompt extend model to use.")
-    parser.add_argument(
-        "--prompt_extend_target_lang",
-        type=str,
-        default="zh",
-        choices=["zh", "en"],
-        help="The target language of prompt extend.")
-    parser.add_argument(
-        "--base_seed",
-        type=int,
-        default=-1,
-        help="The seed to use for generating the video.")
-    parser.add_argument(
-        "--image",
-        type=str,
-        default=None,
-        help="The image to generate the video from.")
-    parser.add_argument(
-        "--sample_solver",
-        type=str,
-        default='unipc',
-        choices=['unipc', 'dpm++'],
-        help="The solver used to sample.")
-    parser.add_argument(
-        "--sample_steps", type=int, default=None, help="The sampling steps.")
+    parser.add_argument("--ulysses_size",
+                        type=int,
+                        default=1,
+                        help="The size of the ulysses parallelism in DiT.")
+    parser.add_argument("--t5_fsdp",
+                        action="store_true",
+                        default=False,
+                        help="Whether to use FSDP for T5.")
+    parser.add_argument("--t5_cpu",
+                        action="store_true",
+                        default=False,
+                        help="Whether to place T5 model on CPU.")
+    parser.add_argument("--dit_fsdp",
+                        action="store_true",
+                        default=False,
+                        help="Whether to use FSDP for DiT.")
+    parser.add_argument("--save_file",
+                        type=str,
+                        default=None,
+                        help="The file to save the generated video to.")
+    parser.add_argument("--prompt",
+                        type=str,
+                        default=None,
+                        help="The prompt to generate the video from.")
+    parser.add_argument("--use_prompt_extend",
+                        action="store_true",
+                        default=False,
+                        help="Whether to use prompt extend.")
+    parser.add_argument("--prompt_extend_method",
+                        type=str,
+                        default="local_qwen",
+                        choices=["dashscope", "local_qwen"],
+                        help="The prompt extend method to use.")
+    parser.add_argument("--prompt_extend_model",
+                        type=str,
+                        default=None,
+                        help="The prompt extend model to use.")
+    parser.add_argument("--prompt_extend_target_lang",
+                        type=str,
+                        default="zh",
+                        choices=["zh", "en"],
+                        help="The target language of prompt extend.")
+    parser.add_argument("--base_seed",
+                        type=int,
+                        default=-1,
+                        help="The seed to use for generating the video.")
+    parser.add_argument("--image",
+                        type=str,
+                        default=None,
+                        help="The image to generate the video from.")
+    parser.add_argument("--sample_solver",
+                        type=str,
+                        default='unipc',
+                        choices=['unipc', 'dpm++'],
+                        help="The solver used to sample.")
+    parser.add_argument("--sample_steps",
+                        type=int,
+                        default=None,
+                        help="The sampling steps.")
     parser.add_argument(
         "--sample_shift",
         type=float,
         default=None,
         help="Sampling shift factor for flow matching schedulers.")
-    parser.add_argument(
-        "--sample_guide_scale",
-        type=float,
-        default=None,
-        help="Classifier free guidance scale.")
-    parser.add_argument(
-        "--convert_model_dtype",
-        action="store_true",
-        default=False,
-        help="Whether to convert model paramerters dtype.")
+    parser.add_argument("--sample_guide_scale",
+                        type=float,
+                        default=None,
+                        help="Classifier free guidance scale.")
+    parser.add_argument("--convert_model_dtype",
+                        action="store_true",
+                        default=False,
+                        help="Whether to convert model paramerters dtype.")
 
     # animate
     parser.add_argument(
@@ -234,66 +218,82 @@ def _parse_args():
         default=77,
         help="How many frames used for temporal guidance. Recommended to be 1 or 5."
     )
-    parser.add_argument(
-        "--replace_flag",
-        action="store_true",
-        default=False,
-        help="Whether to use replace.")
-    parser.add_argument(
-        "--use_relighting_lora",
-        action="store_true",
-        default=False,
-        help="Whether to use relighting lora.")
-    
+    parser.add_argument("--replace_flag",
+                        action="store_true",
+                        default=False,
+                        help="Whether to use replace.")
+    parser.add_argument("--use_relighting_lora",
+                        action="store_true",
+                        default=False,
+                        help="Whether to use relighting lora.")
+
     # following args only works for s2v
     parser.add_argument(
         "--num_clip",
         type=int,
         default=None,
-        help="Number of video clips to generate, the whole video will not exceed the length of audio."
+        help=
+        "Number of video clips to generate, the whole video will not exceed the length of audio."
     )
-    parser.add_argument(
-        "--audio",
-        type=str,
-        default=None,
-        help="Path to the audio file, e.g. wav, mp3")
-    parser.add_argument(
-        "--enable_tts",
-        action="store_true",
-        default=False,
-        help="Use CosyVoice to synthesis audio")
+    parser.add_argument("--audio",
+                        type=str,
+                        default=None,
+                        help="Path to the audio file, e.g. wav, mp3")
+    parser.add_argument("--enable_tts",
+                        action="store_true",
+                        default=False,
+                        help="Use CosyVoice to synthesis audio")
     parser.add_argument(
         "--tts_prompt_audio",
         type=str,
         default=None,
-        help="Path to the tts prompt audio file, e.g. wav, mp3. Must be greater than 16khz, and between 5s to 15s.")
+        help=
+        "Path to the tts prompt audio file, e.g. wav, mp3. Must be greater than 16khz, and between 5s to 15s."
+    )
     parser.add_argument(
         "--tts_prompt_text",
         type=str,
         default=None,
-        help="Content to the tts prompt audio. If provided, must exactly match tts_prompt_audio")
-    parser.add_argument(
-        "--tts_text",
-        type=str,
-        default=None,
-        help="Text wish to synthesize")
-    parser.add_argument(
-        "--pose_video",
-        type=str,
-        default=None,
-        help="Provide Dw-pose sequence to do Pose Driven")
+        help=
+        "Content to the tts prompt audio. If provided, must exactly match tts_prompt_audio"
+    )
+    parser.add_argument("--tts_text",
+                        type=str,
+                        default=None,
+                        help="Text wish to synthesize")
+    parser.add_argument("--pose_video",
+                        type=str,
+                        default=None,
+                        help="Provide Dw-pose sequence to do Pose Driven")
     parser.add_argument(
         "--start_from_ref",
         action="store_true",
         default=False,
-        help="whether set the reference image as the starting point for generation"
-    )
+        help=
+        "whether set the reference image as the starting point for generation")
     parser.add_argument(
         "--infer_frames",
         type=int,
         default=80,
-        help="Number of frames per clip, 48 or 80 or others (must be multiple of 4) for 14B s2v"
+        help=
+        "Number of frames per clip, 48 or 80 or others (must be multiple of 4) for 14B s2v"
     )
+
+    # S3 Upload Arguments
+    parser.add_argument("--s3-bucket",
+                        type=str,
+                        default=None,
+                        help="S3 bucket to upload the generated video to.")
+    parser.add_argument(
+        "--s3-endpoint-url",
+        type=str,
+        default=None,
+        help="S3 compatible endpoint URL. Required for non-AWS S3.")
+    parser.add_argument("--s3-key-prefix",
+                        type=str,
+                        default=None,
+                        help="Prefix for the S3 object key.")
+
     args = parser.parse_args()
     _validate_args(args)
 
@@ -304,12 +304,50 @@ def _init_logging(rank):
     # logging
     if rank == 0:
         # set format
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="[%(asctime)s] %(levelname)s: %(message)s",
-            handlers=[logging.StreamHandler(stream=sys.stdout)])
+        logging.basicConfig(level=logging.DEBUG,
+                            format="[%(asctime)s] %(levelname)s: %(message)s",
+                            handlers=[logging.StreamHandler(stream=sys.stdout)])
     else:
         logging.basicConfig(level=logging.DEBUG)
+
+
+def upload_to_s3(local_file_path, bucket, s3_key, endpoint_url):
+    """
+    Uploads a file to an S3 compatible bucket.
+    Credentials are automatically read from environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY).
+    """
+    logging.info(
+        f"Attempting to upload {local_file_path} to s3://{bucket}/{s3_key}")
+
+    # Boto3 will automatically use AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY from env
+    aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
+    aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+    if not all([
+            aws_access_key_id, aws_secret_access_key, endpoint_url, bucket
+    ]):
+        logging.warning(
+            "S3 upload skipped: Missing one or more required S3 configurations "
+            "(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, endpoint_url, bucket).")
+        return
+
+    try:
+        s3_client = boto3.client('s3',
+                                 endpoint_url=endpoint_url,
+                                 aws_access_key_id=aws_access_key_id,
+                                 aws_secret_access_key=aws_secret_access_key)
+        s3_client.upload_file(local_file_path, bucket, s3_key)
+        logging.info(f"Successfully uploaded to s3://{bucket}/{s3_key}")
+    except FileNotFoundError:
+        logging.error(
+            f"S3 Upload Error: The file {local_file_path} was not found.")
+    except NoCredentialsError:
+        logging.error(
+            "S3 Upload Error: Credentials not available. "
+            "Please configure AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables."
+        )
+    except Exception as e:
+        logging.error(f"S3 Upload Error: An unexpected error occurred: {e}")
 
 
 def generate(args):
@@ -325,11 +363,10 @@ def generate(args):
             f"offload_model is not specified, set to {args.offload_model}.")
     if world_size > 1:
         torch.cuda.set_device(local_rank)
-        dist.init_process_group(
-            backend="nccl",
-            init_method="env://",
-            rank=rank,
-            world_size=world_size)
+        dist.init_process_group(backend="nccl",
+                                init_method="env://",
+                                rank=rank,
+                                world_size=world_size)
     else:
         assert not (
             args.t5_fsdp or args.dit_fsdp
@@ -349,11 +386,10 @@ def generate(args):
                 task=args.task,
                 is_vl=args.image is not None)
         elif args.prompt_extend_method == "local_qwen":
-            prompt_expander = QwenPromptExpander(
-                model_name=args.prompt_extend_model,
-                task=args.task,
-                is_vl=args.image is not None,
-                device=rank)
+            prompt_expander = QwenPromptExpander(model_name=args.prompt_extend_model,
+                                                 task=args.task,
+                                                 is_vl=args.image is not None,
+                                                 device=rank)
         else:
             raise NotImplementedError(
                 f"Unsupport prompt_extend_method: {args.prompt_extend_method}")
@@ -415,16 +451,15 @@ def generate(args):
         )
 
         logging.info(f"Generating video ...")
-        video = wan_t2v.generate(
-            args.prompt,
-            size=SIZE_CONFIGS[args.size],
-            frame_num=args.frame_num,
-            shift=args.sample_shift,
-            sample_solver=args.sample_solver,
-            sampling_steps=args.sample_steps,
-            guide_scale=args.sample_guide_scale,
-            seed=args.base_seed,
-            offload_model=args.offload_model)
+        video = wan_t2v.generate(args.prompt,
+                                 size=SIZE_CONFIGS[args.size],
+                                 frame_num=args.frame_num,
+                                 shift=args.sample_shift,
+                                 sample_solver=args.sample_solver,
+                                 sampling_steps=args.sample_steps,
+                                 guide_scale=args.sample_guide_scale,
+                                 seed=args.base_seed,
+                                 offload_model=args.offload_model)
     elif "ti2v" in args.task:
         logging.info("Creating WanTI2V pipeline.")
         wan_ti2v = wan.WanTI2V(
@@ -440,18 +475,17 @@ def generate(args):
         )
 
         logging.info(f"Generating video ...")
-        video = wan_ti2v.generate(
-            args.prompt,
-            img=img,
-            size=SIZE_CONFIGS[args.size],
-            max_area=MAX_AREA_CONFIGS[args.size],
-            frame_num=args.frame_num,
-            shift=args.sample_shift,
-            sample_solver=args.sample_solver,
-            sampling_steps=args.sample_steps,
-            guide_scale=args.sample_guide_scale,
-            seed=args.base_seed,
-            offload_model=args.offload_model)
+        video = wan_ti2v.generate(args.prompt,
+                                  img=img,
+                                  size=SIZE_CONFIGS[args.size],
+                                  max_area=MAX_AREA_CONFIGS[args.size],
+                                  frame_num=args.frame_num,
+                                  shift=args.sample_shift,
+                                  sample_solver=args.sample_solver,
+                                  sampling_steps=args.sample_steps,
+                                  guide_scale=args.sample_guide_scale,
+                                  seed=args.base_seed,
+                                  offload_model=args.offload_model)
     elif "animate" in args.task:
         logging.info("Creating Wan-Animate pipeline.")
         wan_animate = wan.WanAnimate(
@@ -464,21 +498,19 @@ def generate(args):
             use_sp=(args.ulysses_size > 1),
             t5_cpu=args.t5_cpu,
             convert_model_dtype=args.convert_model_dtype,
-            use_relighting_lora=args.use_relighting_lora
-        )
+            use_relighting_lora=args.use_relighting_lora)
 
         logging.info(f"Generating video ...")
-        video = wan_animate.generate(
-            src_root_path=args.src_root_path,
-            replace_flag=args.replace_flag,
-            refert_num = args.refert_num,
-            clip_len=args.frame_num,
-            shift=args.sample_shift,
-            sample_solver=args.sample_solver,
-            sampling_steps=args.sample_steps,
-            guide_scale=args.sample_guide_scale,
-            seed=args.base_seed,
-            offload_model=args.offload_model)
+        video = wan_animate.generate(src_root_path=args.src_root_path,
+                                     replace_flag=args.replace_flag,
+                                     refert_num=args.refert_num,
+                                     clip_len=args.frame_num,
+                                     shift=args.sample_shift,
+                                     sample_solver=args.sample_solver,
+                                     sampling_steps=args.sample_steps,
+                                     guide_scale=args.sample_guide_scale,
+                                     seed=args.base_seed,
+                                     offload_model=args.offload_model)
     elif "s2v" in args.task:
         logging.info("Creating WanS2V pipeline.")
         wan_s2v = wan.WanS2V(
@@ -527,39 +559,52 @@ def generate(args):
             convert_model_dtype=args.convert_model_dtype,
         )
         logging.info("Generating video ...")
-        video = wan_i2v.generate(
-            args.prompt,
-            img,
-            max_area=MAX_AREA_CONFIGS[args.size],
-            frame_num=args.frame_num,
-            shift=args.sample_shift,
-            sample_solver=args.sample_solver,
-            sampling_steps=args.sample_steps,
-            guide_scale=args.sample_guide_scale,
-            seed=args.base_seed,
-            offload_model=args.offload_model)
+        video = wan_i2v.generate(args.prompt,
+                                 img,
+                                 max_area=MAX_AREA_CONFIGS[args.size],
+                                 frame_num=args.frame_num,
+                                 shift=args.sample_shift,
+                                 sample_solver=args.sample_solver,
+                                 sampling_steps=args.sample_steps,
+                                 guide_scale=args.sample_guide_scale,
+                                 seed=args.base_seed,
+                                 offload_model=args.offload_model)
 
     if rank == 0:
         if args.save_file is None:
             formatted_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-            formatted_prompt = args.prompt.replace(" ", "_").replace("/",
-                                                                     "_")[:50]
+            formatted_prompt = args.prompt.replace(" ", "_").replace(
+                "/", "_")[:50]
             suffix = '.mp4'
             args.save_file = f"{args.task}_{args.size.replace('*','x') if sys.platform=='win32' else args.size}_{args.ulysses_size}_{formatted_prompt}_{formatted_time}" + suffix
 
         logging.info(f"Saving generated video to {args.save_file}")
-        save_video(
-            tensor=video[None],
-            save_file=args.save_file,
-            fps=cfg.sample_fps,
-            nrow=1,
-            normalize=True,
-            value_range=(-1, 1))
+        save_video(tensor=video[None],
+                   save_file=args.save_file,
+                   fps=cfg.sample_fps,
+                   nrow=1,
+                   normalize=True,
+                   value_range=(-1, 1))
         if "s2v" in args.task:
             if args.enable_tts is False:
-                merge_video_audio(video_path=args.save_file, audio_path=args.audio)
+                merge_video_audio(video_path=args.save_file,
+                                  audio_path=args.audio)
             else:
-                merge_video_audio(video_path=args.save_file, audio_path="tts.wav")
+                merge_video_audio(video_path=args.save_file,
+                                  audio_path="tts.wav")
+
+        # --- NEW S3 UPLOAD LOGIC ---
+        if args.s3_bucket:
+            s3_key = os.path.basename(args.save_file)
+            if args.s3_key_prefix:
+                s3_key = os.path.join(args.s3_key_prefix, s3_key)
+
+            upload_to_s3(local_file_path=args.save_file,
+                         bucket=args.s3_bucket,
+                         s3_key=s3_key,
+                         endpoint_url=args.s3_endpoint_url)
+        # --- END OF NEW LOGIC ---
+
     del video
 
     torch.cuda.synchronize()
