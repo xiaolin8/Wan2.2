@@ -13,7 +13,7 @@ spec:
         spec:
           containers:
             - name: pytorch
-              image: 172.31.0.182/system_containers/wan22:pytorch
+              image: 172.31.0.182/system_containers/wan22:1024
               imagePullPolicy: Always
               command:
                 - "torchrun"
@@ -93,7 +93,7 @@ spec:
         spec:
           containers:
             - name: pytorch
-              image: 172.31.0.182/system_containers/wan22:pytorch
+              image: 172.31.0.182/system_containers/wan22:1024
               imagePullPolicy: Always
               command:
                 - "torchrun"
