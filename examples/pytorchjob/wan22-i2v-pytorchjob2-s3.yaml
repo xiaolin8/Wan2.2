@@ -1,10 +1,10 @@
 apiVersion: "kubeflow.org/v1"
 kind: PyTorchJob
 metadata:
-  name: wan22-i2v-distributed2-s3
+  name: wan22-i2v-2x2-s3
 spec:
   runPolicy:
-    cleanPodPolicy: None # 可选值: All, Running, None. All 表示任务结束后清理所有 Pod
+    cleanPodPolicy: None
   pytorchReplicaSpecs:
     Master:
       replicas: 1
@@ -38,12 +38,12 @@ spec:
                 - "--prompt"
                 - "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard. The fluffy-furred feline gazes directly at the camera with a relaxed expression"
                 - "--save_file"
-                - "/output/wan22-i2v-distributed2-rdma.mp4"
-                - "--s3-endpoint-url"
+                - "/output/wan22-i2v-2x2.mp4"
+                - "--s3_endpoint_url"
                 - "https://play.min.io"
-                - "--s3-bucket"
+                - "--s3_bucket"
                 - "wan22"
-                - "--s3-key-prefix"
+                - "--s3_key_prefix"
                 - "wan22-output"
               resources:
                 requests:
@@ -60,12 +60,12 @@ spec:
                   value: "0"
                 - name: NCCL_SOCKET_IFNAME
                   value: "^lo,docker0,veth"
-                - name: S3_ACCESS_KEY
+                - name: AWS_ACCESS_KEY_ID
                   valueFrom:
                     secretKeyRef:
                       name: s3-credentials
                       key: S3_ACCESS_KEY
-                - name: S3_SECRET_KEY
+                - name: AWS_SECRET_ACCESS_KEY
                   valueFrom:
                     secretKeyRef:
                       name: s3-credentials
@@ -121,11 +121,11 @@ spec:
                 - "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard. The fluffy-furred feline gazes directly at the camera with a relaxed expression"
                 - "--save_file"
                 - "/output/wan22-i2v-distributed2-rdma.mp4"
-                - "--s3-endpoint-url"
+                - "--s3_endpoint_url"
                 - "https://play.min.io"
-                - "--s3-bucket"
+                - "--s3_bucket"
                 - "wan22"
-                - "--s3-key-prefix"
+                - "--s3_key_prefix"
                 - "wan22-output"
               resources:
                 requests:
@@ -142,12 +142,12 @@ spec:
                   value: "0"
                 - name: NCCL_SOCKET_IFNAME
                   value: "^lo,docker0,veth"
-                - name: S3_ACCESS_KEY
+                - name: AWS_ACCESS_KEY_ID
                   valueFrom:
                     secretKeyRef:
                       name: s3-credentials
                       key: S3_ACCESS_KEY
-                - name: S3_SECRET_KEY
+                - name: AWS_SECRET_ACCESS_KEY
                   valueFrom:
                     secretKeyRef:
                       name: s3-credentials

@@ -1,7 +1,7 @@
 apiVersion: "kubeflow.org/v1"
 kind: PyTorchJob
 metadata:
-  name: wan22-i2v-distributed2
+  name: wan22-i2v-distributed2-s3
 spec:
   runPolicy:
     cleanPodPolicy: None # 可选值: All, Running, None. All 表示任务结束后清理所有 Pod
@@ -64,11 +64,11 @@ spec:
                 - "刘亦菲和特朗普身着舒适的拳击装备，戴着鲜艳的拳套，在聚光灯照耀的舞台上激烈地搏斗"
                 - "--save_file"
                 - "/output/wan22-i2v-distributed2.mp4"
-                - "--s3-endpoint-url"
+                - "--s3_endpoint_url"
                 - "https://s3.cn-north-1.qiniucs.com"
-                - "--s3-bucket"
+                - "--s3_bucket"
                 - "wan22"
-                - "--s3-key-prefix"
+                - "--s3_key_prefix"
                 - "wan22-output"
               resources:
                 requests:
@@ -175,11 +175,11 @@ spec:
                 - "刘亦菲和特朗普身着舒适的拳击装备，戴着鲜艳的拳套，在聚光灯照耀的舞台上激烈地搏斗"
                 - "--save_file"
                 - "/output/wan22-i2v-distributed2.mp4"
-                - "--s3-endpoint-url"
+                - "--s3_endpoint_url"
                 - "https://s3.cn-north-1.qiniucs.com"
-                - "--s3-bucket"
+                - "--s3_bucket"
                 - "wan22"
-                - "--s3-key-prefix"
+                - "--s3_key_prefix"
                 - "wan22-output"
               resources:
                 requests:

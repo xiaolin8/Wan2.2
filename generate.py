@@ -280,16 +280,16 @@ def _parse_args():
     )
 
     # S3 Upload Arguments
-    parser.add_argument("--s3-bucket",
+    parser.add_argument("--s3_bucket",
                         type=str,
                         default=None,
                         help="S3 bucket to upload the generated video to.")
     parser.add_argument(
-        "--s3-endpoint-url",
+        "--s3_endpoint_url",
         type=str,
         default=None,
         help="S3 compatible endpoint URL. Required for non-AWS S3.")
-    parser.add_argument("--s3-key-prefix",
+    parser.add_argument("--s3_key_prefix",
                         type=str,
                         default=None,
                         help="Prefix for the S3 object key.")

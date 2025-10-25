@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: my-distributed-model-svc # 必须与 StatefulSet 中 serviceName 匹配
+  name: wan22-distributed-svc # 必须与 StatefulSet 中 serviceName 匹配
   namespace: default
 spec:
   clusterIP: None # 关键：Headless Service

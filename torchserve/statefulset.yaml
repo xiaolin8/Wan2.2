@@ -1,85 +1,78 @@
-# statefulset.yaml
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: my-distributed-model
-  namespace: default
+  name: wan22-distributed
 spec:
-  serviceName: my-distributed-model-svc # 引用 Headless Service 名称
-  replicas: 2 # 固定为 2 个 Pod，用于 2 台机器
+  serviceName: wan22-distributed-svc
+  replicas: 2
   selector:
     matchLabels:
-      app: my-distributed-model
+      app: wan22-distributed
   template:
     metadata:
       labels:
-        app: my-distributed-model
+        app: wan22-distributed
     spec:
       nodeSelector:
         gpu: "on" # 确保调度到有 GPU 的节点
-      # 使用 affinity/anti-affinity 确保 Pod 调度到不同的物理节点
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
                 matchLabels:
-                  app: my-distributed-model
-              topologyKey: kubernetes.io/hostname # 确保 Pods 运行在不同的节点上
+                  app: wan22-distributed-model
+              topologyKey: kubernetes.io/hostname
       containers:
-        - name: torchserve-distributed # 容器名称
-          image: your-custom-image:latest # 你的 Docker 镜像
+        - name: torchserve-distributed
+          image: 172.31.0.182/system_containers/wan22:torchserve
           ports:
             - containerPort: 8000
               name: http
-            - containerPort: 8081 # TorchServe 管理 API 端口
+            - containerPort: 8081
               name: management
           resources:
             limits:
-              cpu: 64
+              cpu: "64"
               memory: 128Gi
               nvidia.com/gpu: "4"
-              t7d.com/rdma: "4" # 请求 4 个 RDMA 资源
+              t7d.com/rdma: "1"
             requests:
-              cpu: 8
+              cpu: "8"
               memory: 128Gi
               nvidia.com/gpu: "4"
-              t7d.com/rdma: "4"
+              t7d.com/rdma: "1"
           env:
-            # NCCL 环境变量在这里设置，或在 entrypoint.sh 中设置
             - name: NCCL_DEBUG
               value: "INFO"
             - name: NCCL_DEBUG_SUBSYS
               value: "ALL"
             - name: NCCL_IB_HCA
-              value: "mlx5_0" # 替换为实际的 HCA ID
+              value: "mlx5_0"
             - name: NCCL_SOCKET_IFNAME
-              value: "ib0" # 替换为 Pod 内部 RDMA 接口名称
+              value: "ib0"
             - name: NCCL_IB_DISABLE
               value: "0"
-            # TorchServe 启动所需的 model store 位置
             - name: MODEL_STORE
               value: "/home/model-server/model-store"
             - name: TS_CONFIG_FILE
               value: "/home/model-server/config.properties"
-
           volumeMounts:
+            - mountPath: /data/Wan2.2-T2V-A14B
+              name: data-volume
+            - mountPath: /output
+              name: output-volume
             - name: dshm
               mountPath: /dev/shm
             - name: model-store-rwx
-              mountPath: /home/model-server/model-store # 挂载模型存储 PV
+              mountPath: /home/model-server/model-store
       volumes:
+        - hostPath:
+            path: /data/Wan-AI/Wan2.2-T2V-A14B
+          name: data-volume
+        - hostPath:
+            path: /data/Wan-AI/output
+          name: output-volume
         - name: dshm
           emptyDir:
             medium: Memory
             sizeLimit: 128Gi
-      # 假设模型权重存储在 ReadWriteOnce 的 PV 中，需要根据实际情况调整
-      # 生产中建议使用 ReadWriteMany 的 PV (如 NFS) 或在 handler.py 中从 S3 下载
-  volumeClaimTemplates: # 用于挂载模型的持久卷
-  - metadata:
-      name: model-store-rwx
-    spec:
-      accessModes: [ "ReadWriteOnce" ] # 请根据 PV 类型选择合适的模式
-      storageClassName: "your-storage-class" # 替换为你的 StorageClass
-      resources:
-        requests:
-          storage: 50Gi # 根据模型大小调整

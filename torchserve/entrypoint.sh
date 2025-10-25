@@ -14,7 +14,7 @@ export NCCL_SOCKET_IFNAME="ib0" # 替换为 Pod 内部 RDMA 接口的名称 (例
 # StatefulSet 名称 (在 StatefulSet YAML 中定义)
 STATEFULSET_NAME="my-distributed-model"
 # K8s Service 名称 ( headless service)
-SERVICE_NAME="my-distributed-model-svc"
+SERVICE_NAME="wan22-distributed-svc"
 # K8s 命名空间
 NAMESPACE="default"
 # Master Pod 的端口
