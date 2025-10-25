@@ -345,3 +345,54 @@
 *   你利用了 **TorchServe 的微观管理能力**：获得了 PyTorch 官方支持的、标准化的、高性能的推理后端，以及动态加载模型、调整 worker 等进程内管理能力。
 
 **总结：不要为了使用 TorchServe 而直接创建一个普通的 `Deployment`，这会让你陷入高成本的困境。应当将 TorchServe 视为一个可以被 KServe 等更高级平台所“驱动”的强大引擎。**
+
+----
+
+----
+
+好的，你问到了一个非常关键的点！
+
+KServe **就是** Kubeflow 的核心模型服务组件。
+
+### KServe 与 Kubeflow 的关系
+
+*   **起源**: KServe 最初是作为 Kubeflow 项目的一部分开发的，当时它的名字叫做 **KFServing** (Kubeflow Serving 的缩写)。
+*   **独立发展**: 后来，为了强调其独立性和更广泛的适用性（即不只局限于 Kubeflow 生态，也可以独立部署在任何 Kubernetes 集群上），它更名为 **KServe**，并成为了 CNCF (Cloud Native Computing Foundation) 的孵化项目。
+*   **核心组件**: 尽管 KServe 已经独立发展，但它仍然是 Kubeflow 平台中用于模型服务的**核心和推荐组件**。如果你部署了 Kubeflow，KServe 通常会作为其中的一个子组件被安装。
+
+### 为什么 KServe 是一个非常好的选择？
+
+考虑到你之前提到的需求（长驻推理服务、动态 `prompt` 和参数、成本控制），KServe 是一个非常理想的解决方案，因为它：
+
+1.  **Kubernetes 原生**: KServe 是为 Kubernetes 量身定制的，它利用 K8s 的 CRD (Custom Resource Definition) 来定义 `InferenceService`，让你能以声明式的方式管理模型服务。
+2.  **自动缩容到零 (Scale-to-Zero)**: 这是 KServe 最强大的功能之一，也是解决你 GPU 成本问题的关键。当模型服务在一段时间内没有请求时，KServe 可以将 Pod 数量自动缩减到零，释放昂贵的 GPU 资源。当有新请求到来时，它会快速（但会有冷启动延迟）地将服务扩容回来。
+3.  **服务器less 推理**: KServe 抽象了底层 Kubernetes 的复杂性，让你能够像使用无服务器函数一样部署模型。你只需要关注模型本身，而不用过多关心 Pod、Service、Ingress 等 K8s 细节。
+4.  **多模型框架支持**: KServe 支持多种模型框架，包括：
+    *   TensorFlow Serving
+    *   **TorchServe** (这正是我们之前讨论的，KServe 可以作为 TorchServe 的上层编排器)
+    *   ONNX Runtime
+    *   XGBoost
+    *   Scikit-learn
+    *   以及自定义容器 (Custom Container)
+5.  **高级流量管理**: KServe 利用 Knative Serving 提供的能力，支持 A/B 测试、金丝雀发布 (Canary Rollout) 等高级流量管理功能，这对于模型迭代和灰度发布至关重要。
+6.  **预处理/后处理 (Transformer)**: KServe 允许你在模型推理前后插入自定义的预处理和后处理逻辑，这对于你的“文生视频”、“图生视频”场景非常有用，你可以在这里处理 `prompt`、参数解析、结果格式化等。
+7.  **可解释性 (Explainer)**: KServe 也支持集成模型可解释性工具，帮助你理解模型的决策过程。
+
+### KServe 如何与你的 Go 后端结合？
+
+你的 Go 后端 API 服务 (使用 Gin) 仍然是用户请求的入口。当用户提交视频生成请求时：
+
+1.  Go API 接收请求，进行认证和参数校验。
+2.  Go API 将任务推送到任务队列 (Redis + Asynq)。
+3.  Go Worker 从队列中取出任务。
+4.  **Go Worker 不再创建 `PyTorchJob`，而是通过 `client-go` 库，向 Kubernetes API Server 提交一个 KServe 的 `InferenceService` CRD。**
+    *   这个 `InferenceService` 的 `predictor` 部分会指定使用 `torchserve` 作为模型服务器，并指向你的模型 `.mar` 文件在 S3 上的路径。
+    *   你也可以在 `transformer` 部分定义一个 Go 或 Python 的预处理服务，来处理复杂的 `prompt` 解析和参数转换。
+5.  KServe Operator 接收到 `InferenceService` 定义后，会自动创建和管理底层的 K8s 资源（Deployment, Service, HPA/KPA, Ingress 等）。
+6.  当有请求到来时，KServe 会将请求路由到你的模型服务。如果服务处于缩容到零状态，KServe 会先触发扩容。
+
+### 总结
+
+如果你决定从 `PyTorchJob` 模式转向长驻推理服务模式，并且希望获得最佳的成本效益、可扩展性和管理能力，那么 **KServe 是一个非常强大且推荐的选择**。它能让你在 Kubernetes 上以云原生的方式，高效地部署和管理你的 `wan2.2` 视频生成模型。
+
+而且，由于 `PyTorchJob` 也是 Kubeflow 的组件，使用 KServe 可以让你在同一个 MLOps 平台下，拥有统一的模型训练和模型服务体验。

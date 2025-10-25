@@ -1,7 +1,7 @@
 apiVersion: "kubeflow.org/v1"
 kind: PyTorchJob
 metadata:
-  name: wan22-t2v-distributed2
+  name: wan22-t2v-distributed2-no-fsdp
 spec:
   runPolicy:
     cleanPodPolicy: None # 可选值: All, Running, None. All 表示任务结束后清理所有 Pod
@@ -41,15 +41,17 @@ spec:
                 requests:
                   cpu: "4"
                 limits:
-                  cpu: "16"
+                  cpu: "64"
                   memory: 256Gi
                   nvidia.com/gpu: "2"
                   t7d.com/rdma: "1"
               env:
                 - name: NVIDIA_VISIBLE_DEVICES
                   value: "all"
-                - name: NCCL_DEBUG
-                  value: "INFO"
+                - name: NCCL_IB_DISABLE
+                  value: "0"
+                - name: NCCL_SOCKET_IFNAME
+                  value: "^lo,docker0,veth"
               volumeMounts:
                 - name: data-volume
                   mountPath: /data/Wan2.2-T2V-A14B
@@ -67,7 +69,7 @@ spec:
             - name: dshm
               emptyDir:
                 medium: Memory
-                sizeLimit: 2Gi
+                sizeLimit: 128Gi
     Worker:
       replicas: 1
       restartPolicy: OnFailure
@@ -103,15 +105,17 @@ spec:
                 requests:
                   cpu: "4"
                 limits:
-                  cpu: "16"
+                  cpu: "64"
                   memory: 256Gi
                   nvidia.com/gpu: "2"
                   t7d.com/rdma: "1"
               env:
                 - name: NVIDIA_VISIBLE_DEVICES
                   value: "all"
-                - name: NCCL_DEBUG
-                  value: "INFO"
+                - name: NCCL_IB_DISABLE
+                  value: "0"
+                - name: NCCL_SOCKET_IFNAME
+                  value: "^lo,docker0,veth"
               volumeMounts:
                 - name: data-volume
                   mountPath: /data/Wan2.2-T2V-A14B
@@ -129,4 +133,4 @@ spec:
             - name: dshm
               emptyDir:
                 medium: Memory
-                sizeLimit: 2Gi
+                sizeLimit: 128Gi

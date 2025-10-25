@@ -1,7 +1,7 @@
 apiVersion: "kubeflow.org/v1"
 kind: PyTorchJob
 metadata:
-  name: wan22-t2v-distributed4-rdma
+  name: wan22-distributed4
 spec:
   runPolicy:
     cleanPodPolicy: None # 可选值: All, Running, None. All 表示任务结束后清理所有 Pod
@@ -11,11 +11,10 @@ spec:
       restartPolicy: OnFailure
       template:
         spec:
-          nodeSelector:
-            gpu: "on"
           containers:
             - name: pytorch
               image: 172.31.0.182/system_containers/wan22:pytorch
+              imagePullPolicy: Always
               command:
                 - "torchrun"
               args:
@@ -29,6 +28,7 @@ spec:
                 - "/data/Wan2.2-T2V-A14B"
                 - "--dit_fsdp"
                 - "--t5_fsdp"
+                - "--convert_model_dtype"
                 - "--ulysses_size"
                 - "8"
                 - "--sample_guide_scale"
@@ -36,16 +36,29 @@ spec:
                 - "--prompt"
                 - "A cinematic video. An astronaut in a white spacesuit walks cautiously on the red, dusty surface of Mars. The camera follows the astronaut from behind in a tracking shot. The astronaut stops and looks up in surprise at a giant, dark rock. The camera tilts up to reveal the word \"tenxcloud\" clearly engraved on the rock's surface. The scene is realistic, with a desolate Martian landscape and a faint sun in the background, creating a sense of mystery and discovery."
                 - "--save_file"
-                - "/output/wan22-t2v-distributed4.mp4"
+                - "/output/wan22-distributed4.mp4"
               resources:
                 limits:
-                  cpu: 16
-                  memory: 128Gi
+                  cpu: 64
+                  memory: 256Gi
                   nvidia.com/gpu: "4"
+                  t7d.com/rdma: "1"
                 requests:
                   cpu: 8
                   memory: 128Gi
                   nvidia.com/gpu: "4"
+                  t7d.com/rdma: "1"
+              env:
+                - name: NVIDIA_VISIBLE_DEVICES
+                  value: "all"
+                - name: NCCL_IB_DISABLE
+                  value: "0"
+                - name: NCCL_SOCKET_IFNAME
+                  value: "^lo,docker0,veth"
+                # - name: NCCL_DEBUG
+                #   value: "INFO"
+                # - name: NCCL_DEBUG_SUBSYS
+                #   value: "ALL"
               volumeMounts:
                 - name: data-volume
                   mountPath: /data/Wan2.2-T2V-A14B
@@ -63,19 +76,19 @@ spec:
             - name: dshm
               emptyDir:
                 medium: Memory
-                sizeLimit: 2Gi
+                sizeLimit: 128Gi
     Worker:
       replicas: 1
       restartPolicy: OnFailure
       template:
         spec:
-          nodeSelector:
-            gpu: "on"
           containers:
             - name: pytorch
               image: 172.31.0.182/system_containers/wan22:pytorch
+              imagePullPolicy: Always
               command:
                 - "torchrun"
+              args:
                 - "--nproc_per_node=4"
                 - "generate.py"
                 - "--task"
@@ -86,6 +99,7 @@ spec:
                 - "/data/Wan2.2-T2V-A14B"
                 - "--dit_fsdp"
                 - "--t5_fsdp"
+                - "--convert_model_dtype"
                 - "--ulysses_size"
                 - "8"
                 - "--sample_guide_scale"
@@ -93,19 +107,29 @@ spec:
                 - "--prompt"
                 - "A cinematic video. An astronaut in a white spacesuit walks cautiously on the red, dusty surface of Mars. The camera follows the astronaut from behind in a tracking shot. The astronaut stops and looks up in surprise at a giant, dark rock. The camera tilts up to reveal the word \"tenxcloud\" clearly engraved on the rock's surface. The scene is realistic, with a desolate Martian landscape and a faint sun in the background, creating a sense of mystery and discovery."
                 - "--save_file"
-                - "/output/wan22-t2v-distributed4.mp4"
+                - "/output/wan22-distributed4.mp4"
               resources:
                 limits:
-                  cpu: 16
-                  memory: 128Gi
+                  cpu: 64
+                  memory: 256Gi
                   nvidia.com/gpu: "4"
+                  t7d.com/rdma: "1"
                 requests:
                   cpu: 8
                   memory: 128Gi
                   nvidia.com/gpu: "4"
+                  t7d.com/rdma: "1"
               env:
-              - name: NVIDIA_VISIBLE_DEVICES
-                value: "all"
+                - name: NVIDIA_VISIBLE_DEVICES
+                  value: "all"
+                - name: NCCL_IB_DISABLE
+                  value: "0"
+                - name: NCCL_SOCKET_IFNAME
+                  value: "^lo,docker0,veth"
+                # - name: NCCL_DEBUG
+                #   value: "INFO"
+                # - name: NCCL_DEBUG_SUBSYS
+                #   value: "ALL"
               volumeMounts:
                 - name: data-volume
                   mountPath: /data/Wan2.2-T2V-A14B
@@ -123,4 +147,4 @@ spec:
             - name: dshm
               emptyDir:
                 medium: Memory
-                sizeLimit: 2Gi
+                sizeLimit: 128Gi
