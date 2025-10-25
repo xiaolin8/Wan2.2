@@ -214,6 +214,8 @@ spec:
                   nvidia.com/gpu: "2"
                   t7d.com/rdma: "1"
               env:
+                - name: WAN_FRAME_NUM
+                  value: "241"
                 - name: NVIDIA_VISIBLE_DEVICES
                   value: "all"
                 - name: NCCL_IB_DISABLE
