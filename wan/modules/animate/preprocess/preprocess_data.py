@@ -12,7 +12,7 @@ def _parse_args():
     parser.add_argument(
         "--ckpt_path",
         type=str,
-        default="./checkpoints",
+        default=None,
         help="The path to the preprocessing model's checkpoint directory. ")
 
     parser.add_argument(
@@ -30,7 +30,7 @@ def _parse_args():
         type=str,
         default=None,
         help="The path to save the processed results.")
-    
+
     parser.add_argument(
         "--resolution_area",
         type=int,
@@ -60,7 +60,7 @@ def _parse_args():
         action="store_true",
         default=False,
         help="Whether to use image editing in pose retargeting. Recommended if the character in the reference image or the first frame of the driving video is not in a standard, front-facing pose")
-    
+
     # Parameters for the mask strategy in replacement mode. These control the mask's size and shape. Refer to https://arxiv.org/pdf/2502.06145
     parser.add_argument(
         "--iterations",
@@ -100,30 +100,14 @@ if __name__ == '__main__':
     assert not args.use_flux or args.retarget_flag, "Image editing with FLUX can only be used when pose retargeting is enabled."
 
     pose2d_checkpoint_path = os.path.join(args.ckpt_path, 'pose2d/vitpose_h_wholebody.onnx')
-    if not os.path.exists(pose2d_checkpoint_path):
-        print(f"Warning: Pose2D model file not found at {pose2d_checkpoint_path}")
-        print("Creating a dummy file for testing purposes...")
-        # 创建目录结构
-        os.makedirs(os.path.dirname(pose2d_checkpoint_path), exist_ok=True)
-        # 创建一个空文件用于测试
-        with open(pose2d_checkpoint_path, 'w') as f:
-            f.write("# Dummy model file for testing")
     det_checkpoint_path = os.path.join(args.ckpt_path, 'det/yolov10m.onnx')
-    if not os.path.exists(det_checkpoint_path):
-        print(f"Warning: Detection model file not found at {det_checkpoint_path}")
-        print("Creating a dummy file for testing purposes...")
-        # 创建目录结构
-        os.makedirs(os.path.dirname(det_checkpoint_path), exist_ok=True)
-        # 创建一个空文件用于测试
-        with open(det_checkpoint_path, 'w') as f:
-            f.write("# Dummy model file for testing")
 
     sam2_checkpoint_path = os.path.join(args.ckpt_path, 'sam2/sam2_hiera_large.pt') if args.replace_flag else None
     flux_kontext_path = os.path.join(args.ckpt_path, 'FLUX.1-Kontext-dev') if args.use_flux else None
     process_pipeline = ProcessPipeline(det_checkpoint_path=det_checkpoint_path, pose2d_checkpoint_path=pose2d_checkpoint_path, sam_checkpoint_path=sam2_checkpoint_path, flux_kontext_path=flux_kontext_path)
     os.makedirs(args.save_path, exist_ok=True)
-    process_pipeline(video_path=args.video_path, 
-                     refer_image_path=args.refer_path, 
+    process_pipeline(video_path=args.video_path,
+                     refer_image_path=args.refer_path,
                      output_path=args.save_path,
                      resolution_area=args.resolution_area,
                      fps=args.fps,
