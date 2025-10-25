@@ -69,7 +69,7 @@ spec:
                 - "--s3_bucket"
                 - "wan22"
                 - "--s3_key_prefix"
-                - "wan22-output"
+                - "wan22-i2v-task-20251024112355"
               resources:
                 requests:
                   cpu: "4"
@@ -184,7 +184,7 @@ spec:
                 - "--s3_bucket"
                 - "wan22"
                 - "--s3_key_prefix"
-                - "wan22-output"
+                - "wan22-i2v-task-20251024112355"
               resources:
                 requests:
                   cpu: "4"
