@@ -87,12 +87,12 @@ spec:
                   value: "0"
                 - name: NCCL_SOCKET_IFNAME
                   value: "^lo,docker0,veth"
-                - name: S3_ACCESS_KEY
+                - name: AWS_ACCESS_KEY_ID
                   valueFrom:
                     secretKeyRef:
                       name: s3-credentials
                       key: S3_ACCESS_KEY
-                - name: S3_SECRET_KEY
+                - name: AWS_SECRET_ACCESS_KEY
                   valueFrom:
                     secretKeyRef:
                       name: s3-credentials
@@ -200,12 +200,12 @@ spec:
                   value: "0"
                 - name: NCCL_SOCKET_IFNAME
                   value: "^lo,docker0,veth"
-                - name: S3_ACCESS_KEY
+                - name: AWS_ACCESS_KEY_ID
                   valueFrom:
                     secretKeyRef:
                       name: s3-credentials
                       key: S3_ACCESS_KEY
-                - name: S3_SECRET_KEY
+                - name: AWS_SECRET_ACCESS_KEY
                   valueFrom:
                     secretKeyRef:
                       name: s3-credentials
