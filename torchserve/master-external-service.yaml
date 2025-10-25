@@ -1,0 +1,16 @@
+# master-external-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-distributed-model-external-svc
+  namespace: default
+spec:
+  selector:
+    app: my-distributed-model
+    statefulset.kubernetes.io/pod-name: my-distributed-model-0 # 仅暴露 Master Pod
+  ports:
+    - protocol: TCP
+      port: 8000 # TorchServe 推理端口
+      targetPort: 8000
+      name: http
+  type: ClusterIP # 或 LoadBalancer / NodePort 视外部访问需求而定

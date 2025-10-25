@@ -1,0 +1,17 @@
+# headless-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-distributed-model-svc # 必须与 StatefulSet 中 serviceName 匹配
+  namespace: default
+spec:
+  clusterIP: None # 关键：Headless Service
+  selector:
+    app: my-distributed-model
+  ports:
+    - port: 8000 # TorchServe 推理端口
+      targetPort: 8000
+      name: http
+    - port: 29500 # torch.distributed 通信端口
+      targetPort: 29500
+      name: dist
