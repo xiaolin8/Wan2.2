@@ -90,7 +90,7 @@ spec:
                   t7d.com/rdma: "1"
               env:
                 - name: WAN_FRAME_NUM
-                  value: "241"
+                  value: "81"
                 - name: NVIDIA_VISIBLE_DEVICES
                   value: "all"
                 - name: NCCL_IB_DISABLE
@@ -157,7 +157,7 @@ spec:
                 - "/image-data/input.jpg"
               env:
                 - name: WAN_FRAME_NUM
-                  value: "241"
+                  value: "81"
                 - name: AWS_ACCESS_KEY_ID
                   valueFrom:
                     secretKeyRef:
@@ -215,7 +215,7 @@ spec:
                   t7d.com/rdma: "1"
               env:
                 - name: WAN_FRAME_NUM
-                  value: "241"
+                  value: "81"
                 - name: NVIDIA_VISIBLE_DEVICES
                   value: "all"
                 - name: NCCL_IB_DISABLE

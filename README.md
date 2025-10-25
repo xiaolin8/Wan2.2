@@ -354,6 +354,91 @@ python -m torch.distributed.run --nnodes 1 --nproc_per_node 8 generate.py --task
 
 > 💡 If you're using **Wan-Animate**, we do not recommend using LoRA models trained on `Wan2.2`, since weight changes during training may lead to unexpected behavior.
 
+## Advanced Usage Patterns: Two-Stage Workflow (Preview and Upscale)
+
+In the realm of AI generation, to balance user waiting time and computational costs, adopting a two-stage workflow of "preview first, then refine" is an extremely efficient and common best practice. This allows users to choose from multiple low-cost generated candidate results and then apply high-quality, high-cost "ultra-clear processing" only to the one they are most satisfied with.
+
+Here is the design idea for implementing this workflow within this framework:
+
+---
+
+### Stage 1: Low-Cost, Multi-Sample "Preview Mode"
+
+The goal of this stage is to quickly and inexpensively generate multiple candidate videos so that users can get a rough idea of the results.
+
+**Implementation**:
+
+When submitting a `PyTorchJob`, modify the startup parameters of `generate.py` to "trade quality for speed and cost."
+
+Key cost-reducing parameters include:
+
+1.  **Reduce Resolution (`--size`)**: The most effective cost-reduction method. For example, reduce the resolution from `832*480` to `416*240`.
+2.  **Reduce Sampling Steps (`--sample_steps`)**: Directly affects generation time and quality. For example, reduce the steps from `40` to `20`.
+
+**Example**:
+When submitting a `PyTorchJob` for preview, the `args` section can be dynamically modified:
+```yaml
+- "--size"
+- "416*240"         # <-- Use low resolution
+- "--sample_steps"
+- "20"              # <-- Use fewer steps
+```
+The platform can generate 3-4 such low-cost preview videos for the same user prompt and display them on the front end for the user to choose from.
+
+---
+
+### Stage 2: High-Quality, Single-Sample "Upscaling Processing"
+
+When the user selects a satisfactory result from the preview videos, the platform will start a new, high-cost "refinement" task.
+
+**Implementation**:
+
+The implementation of this stage **highly depends on whether your `generate.py` script and the model itself support "video super-resolution" or "video enhancement" functions**. There are usually two possibilities:
+
+#### Possibility A: Independent "Video Super-Resolution" Task
+
+The ideal situation is that the model or codebase has a separate function specifically for improving video resolution.
+
+*   **Workflow**:
+    1.  The user selects a preview video (e.g., `s3://.../preview-1.mp4`).
+    2.  The control plane submits a new `PyTorchJob`, this time using hypothetical, specialized super-resolution task parameters.
+    3.  This task will download the low-resolution video, process it with a super-resolution model, and then upload the final high-definition version.
+
+*   **Invocation Example (Hypothetical)**:
+    ```bash
+    python generate.py \
+        --task video_super_resolution \
+        --input_video_path /path/to/low_res.mp4 \
+        --size 1920*1080 \
+        --save_file /path/to/final_hd.mp4
+    ```
+
+#### Possibility B: "Re-creation" Based on Low-Resolution Video
+
+If the model does not have a separate super-resolution function, it is sometimes possible to use a principle similar to `img2img`, using the low-resolution video as "initial noise" or a "guide" to regenerate at a high resolution.
+
+*   **Workflow**:
+    1.  This requires the model to be designed to support a video as input and to "re-create" based on it.
+    2.  The control plane submits a `PyTorchJob`, replacing the `--image` parameter with a hypothetical `--init_video` parameter, and sets a lower "redrawing amplitude" or "noise strength" to maintain consistency with the original video's structure.
+
+*   **Invocation Example (Hypothetical)**:
+    ```bash
+    python generate.py \
+        --task i2v-A14B \
+        --init_video /path/to/low_res.mp4 \
+        --size 1920*1080 \
+        --denoising_strength 0.5 \
+        --sample_steps 50
+    ```
+
+### Implementation Advice
+
+1.  **Implement "Preview Mode" Immediately**: This only requires your platform to be able to dynamically modify the known parameters `--size` and `--sample_steps`.
+2.  **Investigate "Upscaling" Functionality**: You need to delve into the `generate.py` script and model documentation to confirm:
+    *   Is there a dedicated video super-resolution function?
+    *   If so, which `--task` needs to be called? What parameters need to be passed?
+    *   If not, this may be a new feature that needs to be developed at the Python code level.
+
 ## Computational Efficiency on Different GPUs
 
 We test the computational efficiency of different **Wan2.2** models on different GPUs in the following table. The results are presented in the format: **Total time (s) / peak GPU memory (GB)**.
