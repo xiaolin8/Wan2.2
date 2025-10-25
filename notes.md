@@ -1,0 +1,2 @@
+172.31.0.182/system_containers/wan22:1024@sha256:a9d5ed293bc5cc42a1edd7bc21c84174e25a37a868dd9e5af00dc1e67ba7f185
+172.31.0.182/system_containers/wan22:torchserve@sha256:512718c198bf708e629cc8c8580d70a7e7eca8a6c0cd1ac034df7dddcedd405e
