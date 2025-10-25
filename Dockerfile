@@ -1,5 +1,5 @@
 # 使用包含 CUDA 开发工具的 PyTorch 镜像
-FROM pytorch/pytorch:2.2.2-cuda12.8-cudnn8-devel
+FROM pytorch/pytorch:2.9.0-cuda12.8-cudnn9-runtime
 # 设置 CUDA 环境变量
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=$CUDA_HOME/bin:$PATH

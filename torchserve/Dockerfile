@@ -1,4 +1,4 @@
-FROM 172.31.0.182/system_containers/wan22:pytorch
+FROM 172.31.0.182/system_containers/wan22:1024
 
 # 安装 TorchServe
 RUN pip install torchserve torch-model-archiver accelerate
