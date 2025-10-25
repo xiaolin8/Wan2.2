@@ -79,6 +79,8 @@ spec:
                   nvidia.com/gpu: "2"
                   t7d.com/rdma: "1"
               env:
+                - name: WAN_FRAME_NUM
+                  value: "241"
                 - name: NVIDIA_VISIBLE_DEVICES
                   value: "all"
                 - name: NCCL_IB_DISABLE
@@ -134,6 +136,8 @@ spec:
                 - "s3://wan22/i2v_input.JPG"
                 - "/image-data/input.jpg"
               env:
+                - name: WAN_FRAME_NUM
+                  value: "241"
                 - name: AWS_ACCESS_KEY_ID
                   valueFrom:
                     secretKeyRef:
