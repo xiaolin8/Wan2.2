@@ -23,7 +23,7 @@ RUN pip install flash-attn --no-build-isolation
 RUN pip install decord librosa peft
 RUN pip install --no-cache-dir -r requirements_s2v.txt
 RUN pip install --upgrade typing-extensions
-RUN pip install --no-cache-dir -r requirements_animate.txt
+# RUN pip install --no-cache-dir -r requirements_animate.txt
 RUN pip install -e .
 # 设置工作目录
 WORKDIR /workspace
