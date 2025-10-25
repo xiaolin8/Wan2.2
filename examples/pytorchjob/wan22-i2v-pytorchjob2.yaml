@@ -11,6 +11,16 @@ spec:
       restartPolicy: OnFailure
       template:
         spec:
+          affinity:
+            podAntiAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchExpressions:
+                  - key: training.kubeflow.org/job-name
+                    operator: In
+                    values:
+                    - wan22-i2v-distributed2-s3
+                topologyKey: "kubernetes.io/hostname"
           initContainers:
             - name: download-image
               image: 172.31.0.182/system_containers/aws-cli:2.13.0
@@ -124,6 +134,16 @@ spec:
       restartPolicy: OnFailure
       template:
         spec:
+          affinity:
+            podAntiAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchExpressions:
+                  - key: training.kubeflow.org/job-name
+                    operator: In
+                    values:
+                    - wan22-i2v-distributed2-s3
+                topologyKey: "kubernetes.io/hostname"
           initContainers:
             - name: download-image
               image: 172.31.0.182/system_containers/aws-cli:2.13.0
