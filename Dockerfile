@@ -19,10 +19,10 @@ RUN pip install --upgrade pip setuptools wheel
 # 分步安装，处理 flash-attn 的特殊性
 RUN grep -v "flash_attn" requirements.txt > requirements_temp.txt && \
     pip install --no-cache-dir -r requirements_temp.txt
-RUN pip install --upgrade typing-extensions
 RUN pip install flash-attn --no-build-isolation
 RUN pip install decord librosa peft
 RUN pip install --no-cache-dir -r requirements_s2v.txt
+RUN pip install --upgrade typing-extensions
 RUN pip install --no-cache-dir -r requirements_animate.txt
 RUN pip install -e .
 # 设置工作目录
