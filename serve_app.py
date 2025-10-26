@@ -19,7 +19,7 @@ from wan.core_logic import run_generation_task
 
 # --- 全局配置 (在生产环境中应通过环境变量或配置文件管理) ---
 # 分布式推理所需的总进程数 (e.g., 2个节点 x 2卡/节点 = 4个进程)
-TOTAL_WORKERS = int(os.environ.get("TOTAL_WORKERS", "4"))
+TOTAL_WORKERS = int(os.environ.get("TOTAL_WORKERS", "2"))
 
 REDIS_HOST = os.environ.get("REDIS_HOST", "172.31.0.181")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
@@ -149,8 +149,8 @@ class APIEntrypoint:
             logging.info(f"APIEntrypoint: Received task, assigning task_id: {task_id}")
 
             # 关键：向 VideoGenerator 工作组的所有 Actor 广播任务
-            # broadcast() 方法会异步地在所有 Actor 上调用指定的方法，且是非阻塞的。
-            self.generator_handle.options(method_name="generate_task").broadcast(task_config)
+            # 使用 remote() 方法异步调用 generate_task 方法
+            self.generator_handle.generate_task.remote(task_config)
 
             # 立即向客户端（Go 控制平面）响应
             return {"status": "task_started", "task_id": task_id}
