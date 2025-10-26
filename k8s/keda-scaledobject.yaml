@@ -1,0 +1,38 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: wan22-ray-cluster-scaler
+spec:
+  # 1. Scale Target: Point to the RayCluster's worker group we want to scale.
+  scaleTargetRef:
+    apiVersion: ray.io/v1 # The API version of the resource to scale
+    kind: RayCluster # The kind of resource to scale
+    name: wan22-ray-cluster # The name of the RayCluster resource
+    envSourceContainerName: ray-worker # The container to read environment variables from
+
+  # Sub-resource scaling for RayCluster worker groups
+  # This tells KEDA to modify spec.workerGroupSpecs[name=gpu-workers].replicas
+  subresource: workerGroupSpecs
+  # The name of the worker group to scale, must match the name in RayCluster YAML
+  subresourceName: gpu-workers
+
+  # 2. Scaling Parameters
+  minReplicaCount: 0 # Scale down to zero when idle
+  maxReplicaCount: 4 # Example max, adjust based on your cluster capacity
+  cooldownPeriod: 300 # Wait 5 minutes after the last trigger before scaling down to 0
+
+  # 3. Trigger: Define what event should cause a scale-up.
+  triggers:
+  - type: redis
+    metadata:
+      # Redis server address, should be discoverable from within the K8s cluster
+      address: "redis-master.redis.svc.cluster.local:6379"
+      # We are monitoring a STREAM data structure
+      listName: "wan22-task-queue" # The name of the Redis Stream for new tasks
+      # The number of messages in the stream required to trigger a scale-up
+      listLength: "1"
+      # Specify that the list is a Redis Stream, not a List
+      isStream: "true"
+    # If your Redis requires authentication, you can use a TriggerAuthentication resource
+    # authenticationRef:
+    #   name: redis-auth

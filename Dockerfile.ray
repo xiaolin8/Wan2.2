@@ -1,0 +1,45 @@
+# Base Image: PyTorch with CUDA development toolkit
+# This provides a solid foundation with Python, PyTorch, and CUDA drivers.
+FROM pytorch/pytorch:2.9.0-cuda12.8-cudnn9-devel
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Install essential system dependencies
+# - ffmpeg: For video post-processing (e.g., watermarking)
+# - fonts-wqy-zenhei: A common Chinese font for text watermarks
+# - build-essential & ninja-build: For compiling Python packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ninja-build \
+    ffmpeg \
+    fonts-wqy-zenhei \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy all project code from the local context into the image
+# This is a more standard and flexible approach than git cloning inside the Dockerfile.
+COPY . .
+
+# Install all Python dependencies in a single layer to optimize caching
+# - ray[serve]: The core framework for distributed computing and serving
+# - redis: For connecting to Redis for progress/result reporting
+# - boto3: For communicating with S3-compatible storage
+# - requirements*.txt: All original application dependencies
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir \
+    -r requirements-ray.txt \
+    -r requirements_s2v.txt
+
+# Install flash-attn separately as its installation can be complex
+# and might benefit from being in its own layer for build caching.
+RUN pip install flash-attn --no-build-isolation
+
+# Expose default Ray ports for potential debugging and access
+# 8265: Ray Dashboard
+# 8000: Ray Serve (default HTTP port)
+EXPOSE 8265 8000
+
+# No CMD or ENTRYPOINT is specified.
+# This image is designed to be used with the Ray Kubernetes Operator.
+# The operator will dynamically inject the appropriate startup command
+# to launch either a Ray Head or a Ray Worker process inside the container.

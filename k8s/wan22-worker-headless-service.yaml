@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wan22-ray-cluster-svc # This name should be referenced by the StatefulSet/RayCluster for discovery
+  labels:
+    app: wan22-ray-cluster
+spec:
+  # By setting clusterIP to None, we create a Headless Service.
+  # This service will not have a single IP and will instead resolve to the IPs of the backing pods.
+  clusterIP: None
+  ports:
+  - port: 6379
+    name: gcs-server
+  - port: 8265
+    name: dashboard
+  - port: 10001
+    name: client
+  # The selector must match the labels of the pods in the RayCluster worker group.
+  selector:
+    ray.io/cluster: wan22-ray-cluster # Default label used by KubeRay operator

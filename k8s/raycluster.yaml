@@ -1,0 +1,86 @@
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: wan22-ray-cluster
+spec:
+  # Ray version should match the version installed in your Docker image
+  rayVersion: '2.9.3'
+
+  # -------------------------------------------------------------------
+  # Ray Head Pod Configuration
+  # The head pod is the brain of the Ray cluster.
+  # -------------------------------------------------------------------
+  headGroupSpec:
+    # The service account for the head pod, needs permissions to manage other pods.
+    serviceAccountName: ray-head-service-account # Example, ensure this SA exists
+    rayStartParams:
+      dashboard-host: '0.0.0.0'
+    template:
+      spec:
+        containers:
+          - name: ray-head
+            image: your-registry/wan22-ray:latest # <-- IMPORTANT: Replace with your actual image path
+            ports:
+              - containerPort: 6379 # Ray head internal port
+                name: gcs-server
+              - containerPort: 8265 # Ray Dashboard
+                name: dashboard
+              - containerPort: 10001 # Ray client
+                name: client
+            resources:
+              requests:
+                cpu: "2"
+                memory: "4Gi"
+              limits:
+                cpu: "4"
+                memory: "8Gi"
+
+  # -------------------------------------------------------------------
+  # Ray Worker Pods Configuration
+  # This is the GPU-powered worker pool that will be autoscaled.
+  # -------------------------------------------------------------------
+  workerGroupSpecs:
+    - groupName: gpu-workers
+      # This is the key for autoscaling. 
+      # We start with 0 replicas, KEDA will scale this up.
+      replicas: 0
+      minReplicas: 0
+      maxReplicas: 4 # Example max, adjust based on your cluster capacity
+      rayStartParams: {}
+      template:
+        spec:
+          # Tolerations might be needed if your GPU nodes are tainted
+          # tolerations:
+          # - key: "nvidia.com/gpu"
+          #   operator: "Exists"
+          #   effect: "NoSchedule"
+          containers:
+            - name: ray-worker
+              image: your-registry/wan22-ray:latest # <-- IMPORTANT: Replace with your actual image path
+              lifecycle:
+                preStop:
+                  exec:
+                    command: ["/bin/sh","-c","ray stop"]
+              resources:
+                requests:
+                  cpu: "4"
+                  memory: "256Gi"
+                  nvidia.com/gpu: "2" # Request 2 GPUs per worker pod
+                limits:
+                  cpu: "64"
+                  memory: "256Gi"
+                  nvidia.com/gpu: "2"
+              # Mount the model data if not baked into the image
+              volumeMounts:
+                - name: data-volume
+                  mountPath: /data/Wan-AI/Wan2.2-I2V-A14B
+                - name: dshm
+                  mountPath: /dev/shm
+          volumes:
+            - name: data-volume
+              hostPath:
+                path: /data/Wan-AI/Wan2.2-I2V-A14B
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 128Gi

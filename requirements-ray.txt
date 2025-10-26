@@ -1,0 +1,8 @@
+# This file specifies all dependencies for the Ray Serve deployment.
+
+# First, include all base requirements from the original file.
+-r requirements.txt
+
+# Second, add the new dependencies required for the serving architecture.
+ray[serve]==2.9.3
+redis>=4.0.0
