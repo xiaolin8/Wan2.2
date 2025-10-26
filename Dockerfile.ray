@@ -23,7 +23,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nano \
     net-tools \
     iputils-ping \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /app/*.md \
+    && rm -rf /app/.git \
+    && rm -rf /app/.idea
 
 # Copy all project code from the local context into the image
 # This is a more standard and flexible approach than git cloning inside the Dockerfile.
