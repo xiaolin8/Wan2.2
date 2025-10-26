@@ -57,7 +57,8 @@ class VideoGenerator:
         # 为每个副本分配唯一的 rank (0 到 TOTAL_WORKERS-1)
         self.rank = hash(replica_name) % TOTAL_WORKERS
         self.world_size = TOTAL_WORKERS
-        self.local_rank = self.rank
+        # 确保 local_rank 在可用 GPU 范围内
+        self.local_rank = self.rank % torch.cuda.device_count()
 
         # 设置分布式环境变量
         os.environ["MASTER_ADDR"] = os.environ.get("MASTER_ADDR", "localhost")
@@ -128,7 +129,7 @@ class VideoGenerator:
                 self.redis_client.xadd(PROGRESS_TOPIC, error_message)
 
 # --- API 入口 (轻量级网关) ---
-@serve.deployment(name="APIEntrypoint")
+@serve.deployment(name="APIEntrypoint", route_prefix="/generate")
 class APIEntrypoint:
     """
     接收来自 Go 控制平面的 HTTP 请求，并将其分发给后台的分布式工作组。
@@ -136,7 +137,7 @@ class APIEntrypoint:
     def __init__(self, generator_handle: "ray.serve.handle.DeploymentHandle"):
         self.generator_handle = generator_handle
 
-    async def generate(self, request: Request) -> Dict:
+    async def __call__(self, request: Request) -> Dict:
         """
         主 API 端点。它启动一个后台生成任务，并立即返回一个任务 ID。
         """
