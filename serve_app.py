@@ -21,7 +21,7 @@ from wan.core_logic import run_generation_task
 # 分布式推理所需的总进程数 (e.g., 2个节点 x 2卡/节点 = 4个进程)
 TOTAL_WORKERS = int(os.environ.get("TOTAL_WORKERS", "4"))
 
-REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+REDIS_HOST = os.environ.get("REDIS_HOST", "172.31.0.181")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
 PROGRESS_TOPIC = "wan22-progress-stream"
 
@@ -43,13 +43,32 @@ class VideoGenerator:
         # Ray 会确保所有副本的 __init__ 都完成后，服务才开始对外提供。
 
         # 关键步骤1: 初始化 torch.distributed 分布式环境
-        # 使用 Ray Train 的标准工具来为 Serve 副本正确设置分布式环境。
-        # 它会自动处理 RANK, WORLD_SIZE 等环境变量的设置和 `init_process_group` 的调用。
-        ray_train_torch.prepare_replica()
+        # 在 Ray Serve 中，我们需要手动协调分布式初始化
+        # 使用 Ray Serve 的副本上下文来获取分布式信息
         
-        self.rank = dist.get_rank()
-        self.world_size = dist.get_world_size()
-        self.local_rank = int(os.environ.get("LOCAL_RANK", 0))
+        # 获取 Ray Serve 副本上下文
+        import ray.serve
+        replica_context = ray.serve.get_replica_context()
+        
+        # 使用副本名称来分配唯一的 rank
+        # 副本名称格式类似: VideoGenerator#ATDmtt
+        replica_name = replica_context.replica_tag
+        
+        # 为每个副本分配唯一的 rank (0 到 TOTAL_WORKERS-1)
+        self.rank = hash(replica_name) % TOTAL_WORKERS
+        self.world_size = TOTAL_WORKERS
+        self.local_rank = self.rank
+
+        # 设置分布式环境变量
+        os.environ["MASTER_ADDR"] = os.environ.get("MASTER_ADDR", "localhost")
+        os.environ["MASTER_PORT"] = os.environ.get("MASTER_PORT", "29500")
+        os.environ["RANK"] = str(self.rank)
+        os.environ["WORLD_SIZE"] = str(self.world_size)
+        os.environ["LOCAL_RANK"] = str(self.local_rank)
+
+        # 初始化分布式进程组
+        dist.init_process_group(backend="nccl")
+        
         torch.cuda.set_device(self.local_rank)
 
         logging.info(f"[Rank {self.rank}] Distributed group initialized. World size: {self.world_size}.")
