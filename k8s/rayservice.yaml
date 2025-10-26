@@ -7,7 +7,23 @@ spec:
   # Part 1: Ray Serve Application Definition
   # This section tells Ray Serve what application to run on the cluster.
   # -------------------------------------------------------------------
-  serveConfigV2: ""
+  serveConfigV2: |
+    applications:
+    - name: video_generation_service
+      route_prefix: /generate
+      import_path: serve_app:app
+      runtime_env:
+        pip:
+          - redis
+          - torch
+          - torchvision
+          - transformers
+          - accelerate
+          - diffusers
+        env_vars:
+          TOTAL_WORKERS: "2"
+          REDIS_HOST: "172.31.0.181"
+          REDIS_PORT: "6379"
 
   # -------------------------------------------------------------------
   # Part 2: Ray Cluster Definition
