@@ -232,33 +232,81 @@ for app_name, app_info in apps.items():
 
 ---
 
-## 7. 测试结果总结 (2025-10-27)
+## 7. NodePort Service 外部访问测试 (2025-10-27)
 
-### 7.1 RayCluster + 手动部署
+### 7.1 NodePort Service 配置
+
+创建 NodePort Service 用于外部访问 RayService：
+
+```bash
+# 应用 NodePort Service
+kubectl apply -f k8s/rayservice-nodeport.yaml
+
+# 查看分配的端口
+kubectl -n hu get svc wan22-rayservice-nodeport
+```
+
+**端口分配**:
+- Serve API: `32401`
+- Dashboard: `31272`
+
+### 7.2 外部访问测试
+
+通过任意集群节点 IP 访问视频生成 API：
+
+```bash
+# 使用节点 IP 测试视频生成 API
+curl -X POST http://172.31.0.80:32401/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task_id": "nodeport_test_001",
+    "prompt": "通过 NodePort 测试视频生成功能",
+    "duration": 5,
+    "resolution": "720p",
+    "model_type": "t2v"
+  }'
+```
+
+**测试结果**:
+- ✅ **外部访问成功**: 通过节点 IP 直接访问 API
+- ✅ **API 响应正常**: 任务成功处理并返回结果
+- ✅ **并发测试**: 多个任务同时处理正常
+- ✅ **GPU 使用正常**: GPU 0 和 GPU 1 325MiB 显存占用
+
+### 7.3 测试结果总结 (2025-10-27)
+
+#### 7.3.1 RayCluster + 手动部署
 - **状态**: ✅ 稳定运行
 - **GPU 使用**: 325MiB 显存占用 (正常)
 - **Serve 应用**: HEALTHY
 - **API 端点**: `/generate` 正常工作
 
-### 7.2 RayService 部署
+#### 7.3.2 RayService 部署
 - **状态**: ✅ 部署成功
 - **自动部署**: YAML 解析存在问题 (需要手动部署 Serve 应用)
 - **手动部署**: ✅ 成功运行
 - **任务处理**: 6个任务，5个完成 (83.3% 成功率)
 
-### 7.3 关键验证点
+#### 7.3.3 NodePort 外部访问
+- **状态**: ✅ 外部访问成功
+- **端口**: Serve API: 32401, Dashboard: 31272
+- **访问方式**: 通过任意集群节点 IP 直接访问
+- **并发测试**: ✅ 多个任务同时处理正常
+
+### 7.4 关键验证点
 ✅ **API 端点响应正常**
 ✅ **任务状态跟踪完整**  
 ✅ **Redis 连接稳定**
 ✅ **GPU 资源使用正常**
 ✅ **分布式部署健康**
+✅ **外部访问正常**
 
-### 7.4 推荐部署方案
+### 7.5 推荐部署方案
 
-**生产环境**: 使用 RayService + 手动部署 Serve 应用
+**生产环境**: 使用 RayService + 手动部署 Serve 应用 + NodePort Service
 **开发环境**: 使用 RayCluster + 手动部署 Serve 应用
 
-RayService 提供了更好的应用生命周期管理，而手动部署避免了 YAML 解析问题，确保了部署的可靠性。
+RayService 提供了更好的应用生命周期管理，NodePort Service 支持外部网络直接访问，而手动部署避免了 YAML 解析问题，确保了部署的可靠性。
 
 ```python
 # serve_app.py (最终实现版)
