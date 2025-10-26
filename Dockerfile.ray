@@ -31,8 +31,8 @@ RUN pip install --upgrade pip && \
     pip uninstall -y setuptools && \
     pip install "setuptools==69.5.1" && \
     pip uninstall -y ray && \
+    pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir \
-    -r requirements.txt \
     -r requirements-ray.txt \
     -r requirements_s2v.txt
 
