@@ -17,7 +17,8 @@ spec:
         serviceAccountName: ray-head-service-account # Example, ensure this SA exists and has permissions to create Pods, Services etc.
         containers:
           - name: ray-head
-            image: 172.31.0.182/system_containers/wan22-ray:1026 # <-- Your new Ray-ready image
+            image: 172.31.0.182/system_containers/wan22-ray:1026
+            imagePullPolicy: Always
             ports:
               - containerPort: 6379 # Ray head internal port
                 name: gcs-server
@@ -50,6 +51,7 @@ spec:
           containers:
             - name: ray-worker
               image: 172.31.0.182/system_containers/wan22-ray:1026
+              imagePullPolicy: Always
               lifecycle:
                 preStop:
                   exec:

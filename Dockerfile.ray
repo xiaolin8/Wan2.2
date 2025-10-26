@@ -27,6 +27,7 @@ COPY . .
 # - requirements*.txt: All original application dependencies
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir \
+    'ray[serve]==2.9.3' \
     -r requirements-ray.txt \
     -r requirements_s2v.txt
 
