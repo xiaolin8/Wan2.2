@@ -5,7 +5,6 @@ from copy import deepcopy
 
 import numpy as np
 import torch
-import torch.cuda.amp as amp
 import torch.nn as nn
 from diffusers.configuration_utils import ConfigMixin, register_to_config
 from diffusers.models.modeling_utils import ModelMixin
@@ -58,7 +57,7 @@ def torch_dfs(model: nn.Module, parent_name='root'):
     return modules, module_names
 
 
-@amp.autocast(enabled=False)
+@torch.amp.autocast(device_type='cuda', enabled=False)
 def rope_apply(x, grid_sizes, freqs, start=None):
     n, c = x.size(2), x.size(3) // 2
     # loop over samples
@@ -76,7 +75,7 @@ def rope_apply(x, grid_sizes, freqs, start=None):
     return torch.stack(output).float()
 
 
-@amp.autocast(enabled=False)
+@torch.amp.autocast(device_type='cuda', enabled=False)
 def rope_apply_usp(x, grid_sizes, freqs):
     s, n, c = x.size(1), x.size(2), x.size(3) // 2
     # loop over samples

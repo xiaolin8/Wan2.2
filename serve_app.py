@@ -10,7 +10,8 @@ import ray
 import redis
 import torch
 import torch.distributed as dist
-from ray import serve, train
+from ray import serve
+from ray.train import torch as torch_dist
 from starlette.requests import Request
 
 # 1. 从重构后的模块中导入核心生成函数
@@ -44,7 +45,7 @@ class VideoGenerator:
         # 关键步骤1: 初始化 torch.distributed 分布式环境
         # 使用 Ray Train 的标准工具来为 Serve 副本正确设置分布式环境。
         # 它会自动处理 RANK, WORLD_SIZE 等环境变量的设置和 `init_process_group` 的调用。
-        train.torch.prepare_replica()
+        torch_dist.prepare_torch_process_group()
         
         self.rank = dist.get_rank()
         self.world_size = dist.get_world_size()
