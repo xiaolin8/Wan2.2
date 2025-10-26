@@ -3,16 +3,7 @@ kind: RayService
 metadata:
   name: wan22-rayservice
 spec:
-  # -------------------------------------------------------------------
-  # Part 1: Ray Serve Application Definition
-  # This section tells Ray Serve what application to run on the cluster.
-  # -------------------------------------------------------------------
   serveConfigV2: ""
-
-  # -------------------------------------------------------------------
-  # Part 2: Ray Cluster Definition
-  # This is the spec for the underlying compute cluster.
-  # -------------------------------------------------------------------
   rayClusterConfig:
     rayVersion: '2.9.3'
     headGroupSpec:

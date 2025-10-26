@@ -471,6 +471,41 @@ serve.run(app, host='0.0.0.0', port=8000)
   - RayCluster: HEALTHY
   - RayService: 手动部署成功，自动部署存在 YAML 解析问题
 
+## GPU 显存占用问题排查结果 (2025-10-27)
+
+### 问题描述
+- **初始状态**: 所有 GPU 显存占用为 0MiB
+- **期望状态**: GPU 显存应有合理占用，证明视频生成服务正在使用 GPU 资源
+
+### 排查过程
+1. **检查 GPU 状态**: `nvidia-smi` 显示所有 GPU 显存占用为 0MiB
+2. **检查 Ray Serve 应用状态**: 发现没有部署任何 Serve 应用
+3. **尝试 RayService 自动部署**: 遇到 YAML 解析错误循环
+4. **切换到 RayCluster + 手动部署**: 成功部署 Serve 应用
+
+### 解决方案
+- **部署策略**: 使用 RayCluster 配置 + 手动执行 `serve run serve_app:app`
+- **应用状态**: 
+  - `VideoGenerator`: 2个副本 (HEALTHY)
+  - `APIEntrypoint`: 1个副本 (HEALTHY)
+- **GPU 使用情况**: 
+  - GPU 0: 325MiB (正在使用)
+  - GPU 1: 325MiB (正在使用)
+  - 其他 GPU: 4MiB (基础占用)
+
+### 关键发现
+- **根本原因**: Serve 应用未正确部署导致 GPU 资源未被使用
+- **成功指标**: GPU 显存占用从 0MiB 变为 325MiB，证明 VideoGenerator 正在使用 GPU
+- **验证方法**: 
+  - `nvidia-smi` 显示显存占用
+  - `serve status` 显示应用健康状态
+  - API 端点 `/generate` 正常工作
+
+### 当前状态
+✅ **GPU 显存占用正常**
+✅ **Serve 应用健康运行**
+✅ **视频生成服务可用**
+
 ## 经验总结
 1. **Ray Serve 分布式部署**: 需要手动管理分布式环境变量和初始化
 2. **API 端点方法**: 必须使用 `__call__` 方法而非自定义方法名
@@ -478,3 +513,5 @@ serve.run(app, host='0.0.0.0', port=8000)
 4. **YAML 配置**: 复杂的 Python 代码在 YAML 中容易产生解析问题
 5. **逐步调试**: 从简单配置开始，逐步增加复杂度
 6. **手动验证**: 在自动部署失败时，手动部署可以验证环境可用性
+7. **GPU 监控**: `nvidia-smi` 是验证 GPU 使用的关键指标
+8. **部署策略**: RayCluster + 手动部署比 RayService 自动部署更稳定
