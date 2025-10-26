@@ -9,11 +9,20 @@ WORKDIR /app
 # - ffmpeg: For video post-processing (e.g., watermarking)
 # - fonts-wqy-zenhei: A common Chinese font for text watermarks
 # - build-essential & ninja-build: For compiling Python packages
+# - curl, wget: For debugging and downloading files
+# - vim, nano: For editing configuration files
+# - net-tools, iputils-ping: For network debugging
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     ninja-build \
     ffmpeg \
     fonts-wqy-zenhei \
+    curl \
+    wget \
+    vim \
+    nano \
+    net-tools \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy all project code from the local context into the image

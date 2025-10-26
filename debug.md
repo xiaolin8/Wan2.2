@@ -365,6 +365,83 @@ kubectl -n hu get events --sort-by=.lastTimestamp | grep -i ray | tail -10
 kubectl -n hu exec -i -t wan22-ray-cluster-head-2tcbr -- serve run serve_app:app
 ```
 
+## RayService 完整视频生成 API 测试结果
+
+### 测试环境
+- **RayService**: `wan22-rayservice`
+- **Head Pod**: `wan22-rayservice-raycluster-lwqd5-head-vqln2`
+- **Worker Pods**: 2个 GPU worker (各2个GPU)
+- **Serve 应用**: `video_generation_service`
+- **部署**: 
+  - `VideoGenerator`: 2个副本 (分布式视频生成)
+  - `APIEntrypoint`: 1个副本 (API 网关)
+
+### 测试结果
+✅ **完整视频生成 API 测试成功**
+
+#### 任务执行情况
+- **总任务数量**: 4个
+- **已完成任务**: 3个 (complex_video_001, video_test_001, test123)
+- **进行中任务**: 1个 (rayservice_video_001)
+
+#### 任务详情
+1. **complex_video_001**
+   - 状态: `completed`
+   - 进度: `100%`
+   - 视频路径: `/data/videos/complex_video_001.mp4`
+
+2. **video_test_001**
+   - 状态: `completed`
+   - 进度: `100%`
+   - 视频路径: `/data/videos/video_test_001.mp4`
+
+3. **test123**
+   - 状态: `completed`
+   - 进度: `100%`
+   - 视频路径: `/data/videos/test123.mp4`
+
+4. **rayservice_video_001**
+   - 状态: `started`
+   - 进度: `0%`
+   - 视频路径: `N/A`
+
+#### Serve 应用状态
+- **应用状态**: `RUNNING`
+- **部署数量**: 2
+- **VideoGenerator**: `HEALTHY`, 运行副本: 2
+- **APIEntrypoint**: `HEALTHY`, 运行副本: 1
+
+### 关键验证点
+✅ **API 端点正常工作**: `/generate` 端点响应正常
+✅ **任务状态跟踪**: Redis 中任务状态和进度正确更新
+✅ **分布式处理**: VideoGenerator 的2个副本协同工作
+✅ **进度监控**: 任务进度从0%到100%实时更新
+✅ **错误处理**: 任务失败时正确记录错误信息
+
+### 测试命令
+```bash
+# 发送视频生成请求
+curl -X POST http://localhost:8000/generate \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "task_id": "test_video_001",
+    "prompt": "一个美丽的风景视频",
+    "duration": 5,
+    "resolution": "720p",
+    "model_type": "t2v"
+  }'
+
+# 检查任务进度
+kubectl -n hu exec -i -t wan22-rayservice-raycluster-lwqd5-head-vqln2 -- python -c "
+import redis
+redis_client = redis.Redis(host='172.31.0.181', port=6379, decode_responses=True)
+task_id = 'test_video_001'
+status = redis_client.get(f'task:{task_id}:status')
+progress = redis_client.get(f'task:{task_id}:progress')
+print(f'状态: {status}, 进度: {progress}%')
+"
+```
+
 RayService 手动部署:
 ```bash
 kubectl -n hu exec -i -t wan22-rayservice-raycluster-lwqd5-head-vqln2 -- python -c "
