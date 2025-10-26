@@ -214,7 +214,10 @@ class WanI2V:
                  guide_scale=5.0,
                  n_prompt="",
                  seed=-1,
-                 offload_model=True):
+                 offload_model=True,
+                 task_id=None,
+                 progress_redis_client=None,
+                 progress_topic=None):
         r"""
         Generates video frames from input image and text prompt using diffusion process.
 
@@ -244,6 +247,12 @@ class WanI2V:
                 Random seed for noise generation. If -1, use random seed
             offload_model (`bool`, *optional*, defaults to True):
                 If True, offloads models to CPU during generation to save VRAM
+            task_id (`str`, *optional*, defaults to None):
+                Unique ID for the current task, used for progress reporting.
+            progress_redis_client (redis.Redis, *optional*, defaults to None):
+                An initialized Redis client for publishing progress.
+            progress_topic (`str`, *optional*, defaults to None):
+                The Redis topic/channel to publish progress messages to.
 
         Returns:
             torch.Tensor:
@@ -379,7 +388,33 @@ class WanI2V:
             if offload_model:
                 torch.cuda.empty_cache()
 
-            for _, t in enumerate(tqdm(timesteps)):
+            # Keep track of last reported progress to throttle messages
+            last_reported_progress = -1
+
+            for i, t in enumerate(tqdm(timesteps, disable=self.rank != 0)):
+                # --- Progress Reporting Logic ---
+                if self.rank == 0 and progress_redis_client and progress_topic and task_id:
+                    # Calculate progress percentage
+                    progress_percent = int(((i + 1) / len(timesteps)) * 100)
+                    # Throttle messages: send every 5% or on the very last step
+                    if progress_percent % 5 == 0 and progress_percent > last_reported_progress or (i + 1) == len(timesteps):
+                        try:
+                            # Using Redis Stream (XADD) is more robust than Pub/Sub
+                            message_dict = {
+                                "task_id": task_id,
+                                "status": "RUNNING",
+                                "progress": str(progress_percent), # Stream values must be strings
+                                "step": str(i + 1),
+                                "total_steps": str(len(timesteps))
+                            }
+                            # The 'topic' is now the stream name
+                            progress_redis_client.xadd(progress_topic, message_dict)
+                            last_reported_progress = progress_percent
+                        except Exception as e:
+                            # Log error but don't crash the generation process
+                            logging.warning(f"Could not publish progress to Redis Stream: {e}")
+                # --- End of Progress Reporting Logic ---
+
                 latent_model_input = [latent.to(self.device)]
                 timestep = [t]
 

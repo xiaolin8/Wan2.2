@@ -294,6 +294,24 @@ def _parse_args():
                         default=None,
                         help="Prefix for the S3 object key.")
 
+    # Progress Reporting Arguments
+    parser.add_argument("--task_id",
+                        type=str,
+                        default=None,
+                        help="Unique ID for the current task, used for progress reporting.")
+    parser.add_argument("--redis_host",
+                        type=str,
+                        default="localhost",
+                        help="Hostname for the Redis server for progress reporting.")
+    parser.add_argument("--redis_port",
+                        type=int,
+                        default=6379,
+                        help="Port for the Redis server.")
+    parser.add_argument("--redis_progress_topic",
+                        type=str,
+                        default="wan22-progress",
+                        help="Redis topic/channel to publish progress messages to.")
+
     args = parser.parse_args()
     _validate_args(args)
 
@@ -356,6 +374,20 @@ def generate(args):
     local_rank = int(os.getenv("LOCAL_RANK", 0))
     device = local_rank
     _init_logging(rank)
+
+    # Initialize Redis client for progress reporting
+    progress_redis_client = None
+    if rank == 0 and args.task_id and args.redis_progress_topic:
+        try:
+            import redis
+            progress_redis_client = redis.Redis(host=args.redis_host, port=args.redis_port, db=0)
+            progress_redis_client.ping()
+            logging.info(f"Connected to Redis at {args.redis_host}:{args.redis_port} for progress reporting.")
+        except ImportError:
+            logging.warning("`redis` library not found. Please `pip install redis` to enable progress reporting.")
+        except Exception as e:
+            logging.error(f"Failed to connect to Redis: {e}")
+            progress_redis_client = None
 
     if args.offload_model is None:
         args.offload_model = False if world_size > 1 else True
@@ -459,7 +491,10 @@ def generate(args):
                                  sampling_steps=args.sample_steps,
                                  guide_scale=args.sample_guide_scale,
                                  seed=args.base_seed,
-                                 offload_model=args.offload_model)
+                                 offload_model=args.offload_model,
+                                 task_id=args.task_id,
+                                 progress_redis_client=progress_redis_client,
+                                 progress_topic=args.redis_progress_topic)
     elif "ti2v" in args.task:
         logging.info("Creating WanTI2V pipeline.")
         wan_ti2v = wan.WanTI2V(
@@ -485,7 +520,10 @@ def generate(args):
                                   sampling_steps=args.sample_steps,
                                   guide_scale=args.sample_guide_scale,
                                   seed=args.base_seed,
-                                  offload_model=args.offload_model)
+                                  offload_model=args.offload_model,
+                                  task_id=args.task_id,
+                                  progress_redis_client=progress_redis_client,
+                                  progress_topic=args.redis_progress_topic)
     elif "animate" in args.task:
         logging.info("Creating Wan-Animate pipeline.")
         wan_animate = wan.WanAnimate(
@@ -510,7 +548,10 @@ def generate(args):
                                      sampling_steps=args.sample_steps,
                                      guide_scale=args.sample_guide_scale,
                                      seed=args.base_seed,
-                                     offload_model=args.offload_model)
+                                     offload_model=args.offload_model,
+                                     task_id=args.task_id,
+                                     progress_redis_client=progress_redis_client,
+                                     progress_topic=args.redis_progress_topic)
     elif "s2v" in args.task:
         logging.info("Creating WanS2V pipeline.")
         wan_s2v = wan.WanS2V(
@@ -544,6 +585,9 @@ def generate(args):
             seed=args.base_seed,
             offload_model=args.offload_model,
             init_first_frame=args.start_from_ref,
+            task_id=args.task_id,
+            progress_redis_client=progress_redis_client,
+            progress_topic=args.redis_progress_topic
         )
     else:
         logging.info("Creating WanI2V pipeline.")
@@ -568,7 +612,10 @@ def generate(args):
                                  sampling_steps=args.sample_steps,
                                  guide_scale=args.sample_guide_scale,
                                  seed=args.base_seed,
-                                 offload_model=args.offload_model)
+                                 offload_model=args.offload_model,
+                                 task_id=args.task_id,
+                                 progress_redis_client=progress_redis_client,
+                                 progress_topic=args.redis_progress_topic)
 
     if rank == 0:
         if args.save_file is None:

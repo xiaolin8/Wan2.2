@@ -3,7 +3,7 @@ kind: StatefulSet
 metadata:
   name: wan22-distributed
 spec:
-  serviceName: wan22-distributed-svc
+  serviceName: my-distributed-svc
   replicas: 2
   selector:
     matchLabels:

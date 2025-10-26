@@ -1,0 +1,267 @@
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  name: wan22-i2v-distributed2-init
+spec:
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        metadata: {}
+        spec:
+          containers:
+          - args:
+            - --nproc_per_node=2
+            - generate.py
+            - --task
+            - i2v-A14B
+            - --size
+            - 832*480
+            - --ckpt_dir
+            - /data/Wan2.2-I2V-A14B
+            - --image
+            - /image-data/input.jpg
+            - --dit_fsdp
+            - --t5_fsdp
+            - --convert_model_dtype
+            - --ulysses_size
+            - "4"
+            - --sample_guide_scale
+            - "10"
+            - --prompt
+            - Summer beach vacation style, a white cat wearing sunglasses sits on
+              a surfboard. The fluffy-furred feline gazes directly at the camera with
+              a relaxed expression
+            - --save_file
+            - /output/wan22-i2v-distributed2-init.mp4
+            - --s3-endpoint-url
+            - https://s3.cn-north-1.qiniucs.com
+            - --s3-bucket
+            - wan22
+            - --s3-key-prefix
+            - wan22-output
+            command:
+            - torchrun
+            env:
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: all
+            - name: NCCL_IB_DISABLE
+              value: "0"
+            - name: NCCL_SOCKET_IFNAME
+              value: ^lo,docker0,veth
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: S3_ACCESS_KEY
+                  name: s3-credentials
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: S3_SECRET_KEY
+                  name: s3-credentials
+            image: 172.31.0.182/system_containers/wan22:1024
+            imagePullPolicy: Always
+            name: pytorch
+            resources:
+              limits:
+                cpu: "64"
+                memory: 256Gi
+                nvidia.com/gpu: "2"
+                t7d.com/rdma: "1"
+              requests:
+                cpu: "4"
+            volumeMounts:
+            - mountPath: /data/Wan2.2-I2V-A14B
+              name: data-volume
+            - mountPath: /output
+              name: output-volume
+            - mountPath: /dev/shm
+              name: dshm
+            - mountPath: /image-data
+              name: image-volume
+          initContainers:
+          - command:
+            - aws
+            - s3
+            - --endpoint-url
+            - https://s3.cn-north-1.qiniucs.com
+            - cp
+            - s3://wan22/i2v_input.JPG
+            - /image-data/input.jpg
+            env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  key: S3_ACCESS_KEY
+                  name: s3-credentials
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: S3_SECRET_KEY
+                  name: s3-credentials
+            image: 172.31.0.182/system_containers/aws-cli:2.13.0
+            name: download-image
+            resources: {}
+            volumeMounts:
+            - mountPath: /image-data
+              name: image-volume
+          volumes:
+          - hostPath:
+              path: /data/Wan-AI/Wan2.2-I2V-A14B
+            name: data-volume
+          - hostPath:
+              path: /data/Wan-AI/output
+            name: output-volume
+          - emptyDir:
+              medium: Memory
+              sizeLimit: 128Gi
+            name: dshm
+          - emptyDir: {}
+            name: image-volume
+    Worker:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        metadata: {}
+        spec:
+          containers:
+          - args:
+            - --nproc_per_node=2
+            - generate.py
+            - --task
+            - i2v-A14B
+            - --size
+            - 832*480
+            - --ckpt_dir
+            - /data/Wan2.2-I2V-A14B
+            - --image
+            - /image-data/input.jpg
+            - --dit_fsdp
+            - --t5_fsdp
+            - --convert_model_dtype
+            - --ulysses_size
+            - "4"
+            - --sample_guide_scale
+            - "10"
+            - --prompt
+            - Summer beach vacation style, a white cat wearing sunglasses sits on
+              a surfboard. The fluffy-furred feline gazes directly at the camera with
+              a relaxed expression
+            - --save_file
+            - /output/wan22-i2v-distributed2-init.mp4
+            - --s3-endpoint-url
+            - https://s3.cn-north-1.qiniucs.com
+            - --s3-bucket
+            - wan22
+            - --s3-key-prefix
+            - wan22-output
+            command:
+            - torchrun
+            env:
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: all
+            - name: NCCL_IB_DISABLE
+              value: "0"
+            - name: NCCL_SOCKET_IFNAME
+              value: ^lo,docker0,veth
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: S3_ACCESS_KEY
+                  name: s3-credentials
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: S3_SECRET_KEY
+                  name: s3-credentials
+            image: 172.31.0.182/system_containers/wan22:1024
+            imagePullPolicy: Always
+            name: pytorch
+            resources:
+              limits:
+                cpu: "64"
+                memory: 256Gi
+                nvidia.com/gpu: "2"
+                t7d.com/rdma: "1"
+              requests:
+                cpu: "4"
+            volumeMounts:
+            - mountPath: /data/Wan2.2-I2V-A14B
+              name: data-volume
+            - mountPath: /output
+              name: output-volume
+            - mountPath: /dev/shm
+              name: dshm
+            - mountPath: /image-data
+              name: image-volume
+          initContainers:
+          - command:
+            - aws
+            - s3
+            - --endpoint-url
+            - https://s3.cn-north-1.qiniucs.com
+            - cp
+            - s3://wan22/i2v_input.JPG
+            - /image-data/input.jpg
+            env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  key: S3_ACCESS_KEY
+                  name: s3-credentials
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: S3_SECRET_KEY
+                  name: s3-credentials
+            image: 172.31.0.182/system_containers/aws-cli:2.13.0
+            name: download-image
+            resources: {}
+            volumeMounts:
+            - mountPath: /image-data
+              name: image-volume
+          volumes:
+          - hostPath:
+              path: /data/Wan-AI/Wan2.2-I2V-A14B
+            name: data-volume
+          - hostPath:
+              path: /data/Wan-AI/output
+            name: output-volume
+          - emptyDir:
+              medium: Memory
+              sizeLimit: 128Gi
+            name: dshm
+          - emptyDir: {}
+            name: image-volume
+  runPolicy:
+    cleanPodPolicy: None
+    suspend: false
+status:
+  completionTime: "2025-10-25T09:21:14Z"
+  conditions:
+  - lastTransitionTime: "2025-10-25T08:52:49Z"
+    lastUpdateTime: "2025-10-25T08:52:49Z"
+    message: PyTorchJob wan22-i2v-distributed2-init is created.
+    reason: PyTorchJobCreated
+    status: "True"
+    type: Created
+  - lastTransitionTime: "2025-10-25T08:53:06Z"
+    lastUpdateTime: "2025-10-25T08:53:06Z"
+    message: PyTorchJob wan22-i2v-distributed2-init is running.
+    reason: PyTorchJobRunning
+    status: "False"
+    type: Running
+  - lastTransitionTime: "2025-10-25T09:21:14Z"
+    lastUpdateTime: "2025-10-25T09:21:14Z"
+    message: PyTorchJob wan22-i2v-distributed2-init is successfully completed.
+    reason: PyTorchJobSucceeded
+    status: "True"
+    type: Succeeded
+  replicaStatuses:
+    Master:
+      selector: training.kubeflow.org/job-name=wan22-i2v-distributed2-init,training.kubeflow.org/operator-name=pytorchjob-controller,training.kubeflow.org/replica-type=master
+      succeeded: 1
+    Worker:
+      succeeded: 1
+  startTime: "2025-10-25T08:52:49Z"
