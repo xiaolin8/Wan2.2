@@ -21,12 +21,12 @@ spec:
     import torch
     import torch.distributed as dist
     import redis
+    from starlette.requests import Request
 
     from wan.core_logic import run_generation_task
 
-    TOTAL_WORKERS = int(os.environ.get("TOTAL_WORKERS", "4"))
-    GPUS_PER_NODE = int(os.environ.get("GPUS_PER_NODE", "2"))
-    REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+    TOTAL_WORKERS = int(os.environ.get("TOTAL_WORKERS", "2"))
+    REDIS_HOST = os.environ.get("REDIS_HOST", "172.31.0.181")
     REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
     PROGRESS_TOPIC = "wan22-progress-stream"
 
@@ -37,11 +37,31 @@ spec:
     )
     class VideoGenerator:
         def __init__(self):
-            dist.init_process_group(backend="nccl", init_method="env://")
-            self.rank = dist.get_rank()
-            self.world_size = dist.get_world_size()
-            self.local_rank = int(os.environ.get("LOCAL_RANK", 0))
+            # 获取 Ray Serve 副本上下文
+            import ray.serve
+            replica_context = ray.serve.get_replica_context()
+            
+            # 使用副本名称来分配唯一的 rank
+            replica_name = replica_context.replica_tag
+            
+            # 为每个副本分配唯一的 rank (0 到 TOTAL_WORKERS-1)
+            self.rank = hash(replica_name) % TOTAL_WORKERS
+            self.world_size = TOTAL_WORKERS
+            # 确保 local_rank 在可用 GPU 范围内
+            self.local_rank = self.rank % torch.cuda.device_count()
+
+            # 设置分布式环境变量
+            os.environ["MASTER_ADDR"] = os.environ.get("MASTER_ADDR", "localhost")
+            os.environ["MASTER_PORT"] = os.environ.get("MASTER_PORT", "29500")
+            os.environ["RANK"] = str(self.rank)
+            os.environ["WORLD_SIZE"] = str(self.world_size)
+            os.environ["LOCAL_RANK"] = str(self.local_rank)
+
+            # 初始化分布式进程组
+            dist.init_process_group(backend="nccl")
+            
             torch.cuda.set_device(self.local_rank)
+
             logging.info(f"[Rank {self.rank}] Distributed group initialized. World size: {self.world_size}.")
             # Load your model here
             logging.info(f"[Rank {self.rank}] Model loaded into GPU memory.")
@@ -70,17 +90,18 @@ spec:
                     error_message = {"task_id": task_id, "status": "FAILED", "error": str(e)}
                     self.redis_client.xadd(PROGRESS_TOPIC, error_message)
 
-    @serve.deployment(name="APIEntrypoint")
+    @serve.deployment(name="APIEntrypoint", route_prefix="/generate")
     class APIEntrypoint:
         def __init__(self, generator_handle):
             self.generator_handle = generator_handle
 
-        async def generate(self, request: Request) -> Dict:
+        async def __call__(self, request: Request) -> Dict:
             try:
                 task_config = await request.json()
                 task_id = task_config.get("task_id", str(uuid.uuid4()))
                 task_config["task_id"] = task_id
-                self.generator_handle.generate_task.broadcast(task_config)
+                # 使用正确的 remote() 调用方式
+                self.generator_handle.generate_task.remote(task_config)
                 return {"status": "task_started", "task_id": task_id}
             except Exception as e:
                 return {"status": "error", "message": str(e)}
@@ -137,9 +158,9 @@ spec:
                     t7d.com/rdma: "1"
                 env:
                   - name: TOTAL_WORKERS
-                    value: "4" # Example: 2 nodes * 2 GPUs/node
-                  - name: GPUS_PER_NODE
-                    value: "2"
+                    value: "2" # 优化后的工作进程数
+                  - name: REDIS_HOST
+                    value: "172.31.0.181"
                   - name: NVIDIA_VISIBLE_DEVICES
                     value: "all"
                   - name: NCCL_IB_DISABLE
