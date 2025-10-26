@@ -1,0 +1,171 @@
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: wan22-rayservice
+spec:
+  # This flag ensures that the RayCluster is not deleted when the RayService is deleted,
+  # allowing for faster restarts and debugging. Set to false for full cleanup.
+  preserveRayCluster: true
+
+  # -------------------------------------------------------------------
+  # Part 1: Ray Serve Application Definition
+  # This section tells Ray Serve what application to run on the cluster.
+  # -------------------------------------------------------------------
+  serveConfigV2: |
+    import ray
+    from ray import serve
+    from typing import Dict
+    import uuid
+    import logging
+    import os
+    import torch
+    import torch.distributed as dist
+    import redis
+
+    from wan.core_logic import run_generation_task
+
+    TOTAL_WORKERS = int(os.environ.get("TOTAL_WORKERS", "4"))
+    GPUS_PER_NODE = int(os.environ.get("GPUS_PER_NODE", "2"))
+    REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+    REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
+    PROGRESS_TOPIC = "wan22-progress-stream"
+
+    @serve.deployment(
+        name="VideoGenerator",
+        num_replicas=TOTAL_WORKERS,
+        ray_actor_options={"num_gpus": 1}
+    )
+    class VideoGenerator:
+        def __init__(self):
+            dist.init_process_group(backend="nccl", init_method="env://")
+            self.rank = dist.get_rank()
+            self.world_size = dist.get_world_size()
+            self.local_rank = int(os.environ.get("LOCAL_RANK", 0))
+            torch.cuda.set_device(self.local_rank)
+            logging.info(f"[Rank {self.rank}] Distributed group initialized. World size: {self.world_size}.")
+            # Load your model here
+            logging.info(f"[Rank {self.rank}] Model loaded into GPU memory.")
+            try:
+                self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+                self.redis_client.ping()
+            except Exception as e:
+                logging.error(f"[Rank {self.rank}] Could not connect to Redis: {e}")
+                self.redis_client = None
+
+        def generate_task(self, task_config: Dict) -> None:
+            task_id = task_config.get("task_id")
+            logging.info(f"[{self.rank}] Starting generation for task_id: {task_id}")
+            task_config['progress_redis_client'] = self.redis_client
+            task_config['redis_progress_topic'] = PROGRESS_TOPIC
+            try:
+                video_tensor, model_cfg = run_generation_task(self.rank, self.world_size, self.local_rank, task_config)
+                if self.rank == 0 and video_tensor is not None:
+                    final_url = f"s3://{task_config.get('s3_bucket')}/{task_config.get('s3_key_prefix')}.mp4"
+                    if self.redis_client:
+                        final_message = {"task_id": task_id, "status": "COMPLETED", "progress": "100", "url": final_url}
+                        self.redis_client.xadd(PROGRESS_TOPIC, final_message)
+            except Exception as e:
+                logging.error(f"[{self.rank}] Task {task_id} failed: {e}")
+                if self.rank == 0 and self.redis_client:
+                    error_message = {"task_id": task_id, "status": "FAILED", "error": str(e)}
+                    self.redis_client.xadd(PROGRESS_TOPIC, error_message)
+
+    @serve.deployment(name="APIEntrypoint")
+    class APIEntrypoint:
+        def __init__(self, generator_handle):
+            self.generator_handle = generator_handle
+
+        async def generate(self, request: Request) -> Dict:
+            try:
+                task_config = await request.json()
+                task_id = task_config.get("task_id", str(uuid.uuid4()))
+                task_config["task_id"] = task_id
+                self.generator_handle.generate_task.broadcast(task_config)
+                return {"status": "task_started", "task_id": task_id}
+            except Exception as e:
+                return {"status": "error", "message": str(e)}
+
+    app = APIEntrypoint.bind(VideoGenerator.bind())
+
+  # -------------------------------------------------------------------
+  # Part 2: Ray Cluster Definition
+  # This is the spec for the underlying compute cluster.
+  # -------------------------------------------------------------------
+  rayClusterSpec:
+    rayVersion: '2.9.3'
+    headGroupSpec:
+      serviceAccountName: ray-head-service-account
+      rayStartParams:
+        dashboard-host: '0.0.0.0'
+      template:
+        spec:
+          containers:
+            - name: ray-head
+              image: 172.31.0.182/system_containers/wan22-ray:1026 # Your Ray-ready image
+              ports:
+                - containerPort: 6379
+                  name: gcs-server
+              resources:
+                requests:
+                  cpu: "2"
+                  memory: "4Gi"
+                limits:
+                  cpu: "4"
+                  memory: "8Gi"
+    workerGroupSpecs:
+      - groupName: gpu-workers
+        replicas: 0      # Start with 0, KEDA will scale this
+        minReplicas: 0   # Required for KEDA to scale down to 0
+        maxReplicas: 4   # Max number of worker pods
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+              - name: ray-worker
+                image: 172.31.0.182/system_containers/wan22-ray:1026 # Your Ray-ready image
+                lifecycle:
+                  preStop:
+                    exec:
+                      command: ["/bin/sh","-c","ray stop"]
+                resources:
+                  requests:
+                    cpu: "4"
+                  limits:
+                    cpu: "64"
+                    memory: 256Gi
+                    nvidia.com/gpu: "2"
+                    t7d.com/rdma: "1"
+                env:
+                  - name: TOTAL_WORKERS
+                    value: "4" # Example: 2 nodes * 2 GPUs/node
+                  - name: GPUS_PER_NODE
+                    value: "2"
+                  - name: NVIDIA_VISIBLE_DEVICES
+                    value: "all"
+                  - name: NCCL_IB_DISABLE
+                    value: "0"
+                  - name: NCCL_SOCKET_IFNAME
+                    value: "^lo,docker0,veth"
+                  - name: AWS_ACCESS_KEY_ID
+                    valueFrom:
+                      secretKeyRef:
+                        name: s3-credentials
+                        key: S3_ACCESS_KEY
+                  - name: AWS_SECRET_ACCESS_KEY
+                    valueFrom:
+                      secretKeyRef:
+                        name: s3-credentials
+                        key: S3_SECRET_KEY
+                volumeMounts:
+                  - name: data-volume
+                    mountPath: /data/Wan2.2-I2V-A14B
+                  - name: dshm
+                    mountPath: /dev/shm
+            volumes:
+              - name: data-volume
+                hostPath:
+                  path: /data/Wan-AI/Wan2.2-I2V-A14B
+              - name: dshm
+                emptyDir:
+                  medium: Memory
+                  sizeLimit: 128Gi

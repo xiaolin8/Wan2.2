@@ -8,24 +8,22 @@ spec:
 
   # -------------------------------------------------------------------
   # Ray Head Pod Configuration
-  # The head pod is the brain of the Ray cluster.
   # -------------------------------------------------------------------
   headGroupSpec:
-    # The service account for the head pod, needs permissions to manage other pods.
-    serviceAccountName: ray-head-service-account # Example, ensure this SA exists
     rayStartParams:
       dashboard-host: '0.0.0.0'
     template:
       spec:
+        serviceAccountName: ray-head-service-account # Example, ensure this SA exists and has permissions to create Pods, Services etc.
         containers:
           - name: ray-head
-            image: your-registry/wan22-ray:latest # <-- IMPORTANT: Replace with your actual image path
+            image: 172.31.0.182/system_containers/wan22-ray:1026 # <-- Your new Ray-ready image
             ports:
               - containerPort: 6379 # Ray head internal port
                 name: gcs-server
-              - containerPort: 8265 # Ray Dashboard
+              - containerPort: 8265
                 name: dashboard
-              - containerPort: 10001 # Ray client
+              - containerPort: 10001
                 name: client
             resources:
               requests:
@@ -49,14 +47,9 @@ spec:
       rayStartParams: {}
       template:
         spec:
-          # Tolerations might be needed if your GPU nodes are tainted
-          # tolerations:
-          # - key: "nvidia.com/gpu"
-          #   operator: "Exists"
-          #   effect: "NoSchedule"
           containers:
             - name: ray-worker
-              image: your-registry/wan22-ray:latest # <-- IMPORTANT: Replace with your actual image path
+              image: 172.31.0.182/system_containers/wan22-ray:1026
               lifecycle:
                 preStop:
                   exec:
@@ -64,22 +57,44 @@ spec:
               resources:
                 requests:
                   cpu: "4"
-                  memory: "256Gi"
-                  nvidia.com/gpu: "2" # Request 2 GPUs per worker pod
                 limits:
                   cpu: "64"
-                  memory: "256Gi"
+                  memory: 256Gi
                   nvidia.com/gpu: "2"
-              # Mount the model data if not baked into the image
+                  t7d.com/rdma: "1"
+              # Task-specific variables like WAN_FRAME_NUM are omitted as they will be passed dynamically
+              env:
+                - name: NVIDIA_VISIBLE_DEVICES
+                  value: "all"
+                - name: NCCL_IB_DISABLE
+                  value: "0"
+                - name: NCCL_SOCKET_IFNAME
+                  value: "^lo,docker0,veth"
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: s3-credentials
+                      key: S3_ACCESS_KEY
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: s3-credentials
+                      key: S3_SECRET_KEY
+              # The initContainer-related 'image-volume' is omitted
               volumeMounts:
                 - name: data-volume
-                  mountPath: /data/Wan-AI/Wan2.2-I2V-A14B
+                  mountPath: /data/Wan2.2-I2V-A14B
+                - name: output-volume
+                  mountPath: /output
                 - name: dshm
                   mountPath: /dev/shm
           volumes:
             - name: data-volume
               hostPath:
                 path: /data/Wan-AI/Wan2.2-I2V-A14B
+            - name: output-volume
+              hostPath:
+                path: /data/Wan-AI/output
             - name: dshm
               emptyDir:
                 medium: Memory
