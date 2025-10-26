@@ -4,5 +4,5 @@
 -r requirements.txt
 
 # Second, add the new dependencies required for the serving architecture.
-ray[serve]==2.9.3
+ray[serve,train]==2.9.3
 redis>=4.0.0

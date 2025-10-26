@@ -10,7 +10,7 @@ import ray
 import redis
 import torch
 import torch.distributed as dist
-from ray import serve
+from ray import serve, train
 from starlette.requests import Request
 
 # 1. 从重构后的模块中导入核心生成函数
@@ -42,10 +42,9 @@ class VideoGenerator:
         # Ray 会确保所有副本的 __init__ 都完成后，服务才开始对外提供。
 
         # 关键步骤1: 初始化 torch.distributed 分布式环境
-        # Ray 会自动为这个 Deployment 中的所有 Actor 注入 RANK, WORLD_SIZE 等环境变量，
-        # 因此我们可以像在 PyTorchJob 中一样，直接使用 "env://" 方法进行初始化。
-        # 这完美地替代了 torchrun 的功能。
-        dist.init_process_group(backend="nccl", init_method="env://")
+        # 使用 Ray Train 的标准工具来为 Serve 副本正确设置分布式环境。
+        # 它会自动处理 RANK, WORLD_SIZE 等环境变量的设置和 `init_process_group` 的调用。
+        train.torch.prepare_replica()
         
         self.rank = dist.get_rank()
         self.world_size = dist.get_world_size()
