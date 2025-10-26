@@ -37,13 +37,7 @@ RUN pip install --upgrade pip && \
 
 # Install flash-attn separately as its installation can be complex
 # and might benefit from being in its own layer for build caching.
-# We use wget with retries to make the download more robust against network issues.
-RUN FLASH_ATTN_WHEEL_URL="https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.9cxx11abiTRUE-cp311-cp311-linux_x86_64.whl" && \
-    apt-get update && apt-get install -y wget && \
-    wget --tries=5 --timeout=30 -O flash_attn.whl "${FLASH_ATTN_WHEEL_URL}" && \
-    pip install flash_attn.whl && \
-    rm flash_attn.whl && \
-    apt-get purge -y --auto-remove wget && rm -rf /var/lib/apt/lists/*
+RUN pip install flash-attn --no-build-isolation
 
 # Expose default Ray ports for potential debugging and access
 # 8265: Ray Dashboard
