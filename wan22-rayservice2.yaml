@@ -1,0 +1,161 @@
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"ray.io/v1","kind":"RayService","metadata":{"annotations":{},"creationTimestamp":"2025-10-26T23:29:17Z","generation":1,"name":"wan22-rayservice","namespace":"hu","resourceVersion":"119962720","uid":"17ecf749-d106-4d4c-b679-a250993fdecb"},"spec":{"rayClusterConfig":{"headGroupSpec":{"rayStartParams":{"dashboard-host":"0.0.0.0"},"template":{"spec":{"containers":[{"image":"172.31.0.182/system_containers/wan22-ray:1026","name":"ray-head","ports":[{"containerPort":6379,"name":"gcs-server","protocol":"TCP"},{"containerPort":8265,"name":"dashboard","protocol":"TCP"}],"resources":{"limits":{"cpu":"4","memory":"8Gi"},"requests":{"cpu":"2","memory":"4Gi"}}}]}}},"rayVersion":"2.9.3","workerGroupSpecs":[{"groupName":"gpu-workers","maxReplicas":4,"minReplicas":2,"numOfHosts":1,"rayStartParams":{},"replicas":2,"template":{"spec":{"containers":[{"env":[{"name":"TOTAL_WORKERS","value":"2"},{"name":"REDIS_HOST","value":"172.31.0.181"},{"name":"NVIDIA_VISIBLE_DEVICES","value":"all"},{"name":"NCCL_IB_DISABLE","value":"0"},{"name":"NCCL_SOCKET_IFNAME","value":"^lo,docker0,veth"},{"name":"AWS_ACCESS_KEY_ID","valueFrom":{"secretKeyRef":{"key":"S3_ACCESS_KEY","name":"s3-credentials"}}},{"name":"AWS_SECRET_ACCESS_KEY","valueFrom":{"secretKeyRef":{"key":"S3_SECRET_KEY","name":"s3-credentials"}}}],"image":"172.31.0.182/system_containers/wan22-ray:1026","name":"ray-worker","resources":{"limits":{"cpu":"64","memory":"256Gi","nvidia.com/gpu":"2","t7d.com/rdma":"1"},"requests":{"cpu":"4"}},"volumeMounts":[{"mountPath":"/data/Wan2.2-I2V-A14B","name":"data-volume"},{"mountPath":"/dev/shm","name":"dshm"}]}],"volumes":[{"hostPath":{"path":"/data/Wan-AI/Wan2.2-I2V-A14B"},"name":"data-volume"},{"emptyDir":{"medium":"Memory","sizeLimit":"128Gi"},"name":"dshm"}]}}}]},"serveConfigV2":"applications:\n- name: video_generation_service\n  route_prefix: /generate\n  import_path: serve_app:app\n  runtime_env:\n    working_dir: \"file:///serve_app.zip\"\n    pip: \"file:///pip_requirements.txt\"\n    py_modules: [\"file:///wan_modules.zip\"]\n    env_vars:\n      TOTAL_WORKERS: \"2\"\n      REDIS_HOST: \"172.31.0.181\"\n      REDIS_PORT: \"6379\"\n\n# 将文件挂载到容器内的 /serve 目录\nvolumes:\n  - name: serve-files\n    configMap:\n      name: wan22-serve-files\ncontainer:\n  volumeMounts:\n  - name: serve-files\n    mountPath: /serve\n"},"status":{"activeServiceStatus":{"rayClusterStatus":{"conditions":[{"lastTransitionTime":"2025-10-26T23:29:23Z","message":"","reason":"HeadPodRunningAndReady","status":"True","type":"HeadPodReady"},{"lastTransitionTime":"2025-10-26T23:29:20Z","message":"RayCluster Pods are being provisioned for first time","reason":"RayClusterPodsProvisioning","status":"False","type":"RayClusterProvisioned"}],"desiredCPU":"10","desiredGPU":"4","desiredMemory":"516Gi","desiredTPU":"0","desiredWorkerReplicas":2,"endpoints":{"dashboard":"8265","gcs-server":"6379","metrics":"8080"},"head":{"podIP":"172.30.9.39","podName":"wan22-rayservice-raycluster-w7wvd-head-g6r77","serviceIP":"172.30.9.39","serviceName":"wan22-rayservice-raycluster-w7wvd-head-svc"},"lastUpdateTime":"2025-10-27T01:28:45Z","maxWorkerReplicas":4,"minWorkerReplicas":2,"observedGeneration":1}},"observedGeneration":1,"pendingServiceStatus":{"rayClusterName":"wan22-rayservice-raycluster-w7wvd","rayClusterStatus":{"desiredCPU":"0","desiredGPU":"0","desiredMemory":"0","desiredTPU":"0","head":{}}},"serviceStatus":"WaitForServeDeploymentReady"}}
+  creationTimestamp: "2025-10-27T02:51:45Z"
+  generation: 1
+  name: wan22-rayservice
+  namespace: hu
+  resourceVersion: "120009786"
+  uid: 6a63860c-bb34-4791-a691-4a7476a8e867
+spec:
+  rayClusterConfig:
+    headGroupSpec:
+      rayStartParams:
+        dashboard-host: 0.0.0.0
+      template:
+        spec:
+          containers:
+          - image: 172.31.0.182/system_containers/wan22-ray:1026
+            name: ray-head
+            ports:
+            - containerPort: 6379
+              name: gcs-server
+              protocol: TCP
+            - containerPort: 8265
+              name: dashboard
+              protocol: TCP
+            resources:
+              limits:
+                cpu: "4"
+                memory: 8Gi
+              requests:
+                cpu: "2"
+                memory: 4Gi
+    rayVersion: 2.9.3
+    workerGroupSpecs:
+    - groupName: gpu-workers
+      maxReplicas: 4
+      minReplicas: 2
+      numOfHosts: 1
+      rayStartParams: {}
+      replicas: 2
+      template:
+        spec:
+          containers:
+          - env:
+            - name: TOTAL_WORKERS
+              value: "2"
+            - name: REDIS_HOST
+              value: 172.31.0.181
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: all
+            - name: NCCL_IB_DISABLE
+              value: "0"
+            - name: NCCL_SOCKET_IFNAME
+              value: ^lo,docker0,veth
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  key: S3_ACCESS_KEY
+                  name: s3-credentials
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: S3_SECRET_KEY
+                  name: s3-credentials
+            image: 172.31.0.182/system_containers/wan22-ray:1026
+            name: ray-worker
+            resources:
+              limits:
+                cpu: "64"
+                memory: 256Gi
+                nvidia.com/gpu: "2"
+                t7d.com/rdma: "1"
+              requests:
+                cpu: "4"
+            volumeMounts:
+            - mountPath: /data/Wan2.2-I2V-A14B
+              name: data-volume
+            - mountPath: /dev/shm
+              name: dshm
+          volumes:
+          - hostPath:
+              path: /data/Wan-AI/Wan2.2-I2V-A14B
+            name: data-volume
+          - emptyDir:
+              medium: Memory
+              sizeLimit: 128Gi
+            name: dshm
+  serveConfigV2: |
+    applications:
+    - name: video_generation_service
+      route_prefix: /generate
+      import_path: serve_app:app
+      runtime_env:
+        working_dir: "file:///serve_app.zip"
+        pip: "file:///pip_requirements.txt"
+        py_modules: ["file:///wan_modules.zip"]
+        env_vars:
+          TOTAL_WORKERS: "2"
+          REDIS_HOST: "172.31.0.181"
+          REDIS_PORT: "6379"
+
+    # 将文件挂载到容器内的 /serve 目录
+    volumes:
+      - name: serve-files
+        configMap:
+          name: wan22-serve-files
+    container:
+      volumeMounts:
+      - name: serve-files
+        mountPath: /serve
+status:
+  activeServiceStatus:
+    rayClusterStatus:
+      availableWorkerReplicas: 2
+      conditions:
+      - lastTransitionTime: "2025-10-27T02:51:50Z"
+        message: ""
+        reason: HeadPodRunningAndReady
+        status: "True"
+        type: HeadPodReady
+      - lastTransitionTime: "2025-10-27T02:52:01Z"
+        message: All Ray Pods are ready for the first time
+        reason: AllPodRunningAndReadyFirstTime
+        status: "True"
+        type: RayClusterProvisioned
+      desiredCPU: "10"
+      desiredGPU: "4"
+      desiredMemory: 516Gi
+      desiredTPU: "0"
+      desiredWorkerReplicas: 2
+      endpoints:
+        dashboard: "8265"
+        gcs-server: "6379"
+        metrics: "8080"
+      head:
+        podIP: 172.30.9.27
+        podName: wan22-rayservice-raycluster-gngck-head-w9jmz
+        serviceIP: 172.30.9.27
+        serviceName: wan22-rayservice-raycluster-gngck-head-svc
+      lastUpdateTime: "2025-10-27T02:52:01Z"
+      maxWorkerReplicas: 4
+      minWorkerReplicas: 2
+      observedGeneration: 1
+      readyWorkerReplicas: 2
+      state: ready
+      stateTransitionTimes:
+        ready: "2025-10-27T02:52:01Z"
+  observedGeneration: 1
+  pendingServiceStatus:
+    rayClusterName: wan22-rayservice-raycluster-gngck
+    rayClusterStatus:
+      desiredCPU: "0"
+      desiredGPU: "0"
+      desiredMemory: "0"
+      desiredTPU: "0"
+      head: {}
+  serviceStatus: WaitForServeDeploymentReady

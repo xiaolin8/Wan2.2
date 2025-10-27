@@ -1,0 +1,101 @@
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: wan22-rayservice2
+spec:
+  rayClusterConfig:
+    headGroupSpec:
+      rayStartParams:
+        dashboard-host: 0.0.0.0
+      template:
+        spec:
+          containers:
+          - image: 172.31.0.182/system_containers/wan22-ray:1026
+            name: ray-head
+            ports:
+            - containerPort: 6379
+              name: gcs-server
+              protocol: TCP
+            - containerPort: 8265
+              name: dashboard
+              protocol: TCP
+            resources:
+              limits:
+                cpu: "4"
+                memory: 8Gi
+              requests:
+                cpu: "2"
+                memory: 4Gi
+    rayVersion: 2.9.3
+    workerGroupSpecs:
+    - groupName: gpu-workers
+      maxReplicas: 4
+      minReplicas: 2
+      numOfHosts: 1
+      rayStartParams: {}
+      replicas: 2
+      template:
+        spec:
+          containers:
+          - env:
+            - name: TOTAL_WORKERS
+              value: "2"
+            - name: REDIS_HOST
+              value: 172.31.0.181
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: all
+            - name: NCCL_IB_DISABLE
+              value: "0"
+            - name: NCCL_SOCKET_IFNAME
+              value: ^lo,docker0,veth
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  key: S3_ACCESS_KEY
+                  name: s3-credentials
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: S3_SECRET_KEY
+                  name: s3-credentials
+            image: 172.31.0.182/system_containers/wan22-ray:1026
+            name: ray-worker
+            resources:
+              limits:
+                cpu: "64"
+                memory: 256Gi
+                nvidia.com/gpu: "2"
+                t7d.com/rdma: "1"
+              requests:
+                cpu: "4"
+            volumeMounts:
+            - mountPath: /data/Wan2.2-I2V-A14B
+              name: data-volume
+            - mountPath: /dev/shm
+              name: dshm
+          volumes:
+          - hostPath:
+              path: /data/Wan-AI/Wan2.2-I2V-A14B
+            name: data-volume
+          - emptyDir:
+              medium: Memory
+              sizeLimit: 128Gi
+            name: dshm
+  serveConfigV2: |
+    applications:
+    - name: video_generation_service
+      route_prefix: /generate
+      import_path: serve_app:app
+      runtime_env:
+        working_dir: "."
+        pip:
+          - redis
+          - torch
+          - torchvision
+          - transformers
+          - accelerate
+          - diffusers
+      env_vars:
+        TOTAL_WORKERS: "2"
+        REDIS_HOST: "172.31.0.181"
+        REDIS_PORT: "6379"
