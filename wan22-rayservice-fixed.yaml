@@ -3,6 +3,21 @@ kind: RayService
 metadata:
   name: wan22-rayservice
 spec:
+  serveService:
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: wan22-rayservice-nodeport
+      namespace: hu
+    spec:
+      type: NodePort
+      ports:
+      - name: serve-api
+        port: 8000
+        targetPort: 8000
+      - name: dashboard
+        port: 8265
+        targetPort: 8265
   rayClusterConfig:
     headGroupSpec:
       rayStartParams:
@@ -102,19 +117,3 @@ spec:
         TOTAL_WORKERS: "2"
         REDIS_HOST: "172.31.0.181"
         REDIS_PORT: "6379"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: wan22-rayservice-nodeport
-spec:
-  type: NodePort
-  selector:
-    wan22-app: video-service-head
-  ports:
-  - name: serve-api
-    port: 8000
-    targetPort: 8000
-  - name: dashboard
-    port: 8265
-    targetPort: 8265
