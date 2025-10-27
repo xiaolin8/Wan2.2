@@ -3,10 +3,6 @@ kind: RayService
 metadata:
   name: wan22-rayservice
 spec:
-  # -------------------------------------------------------------------
-  # Part 1: Ray Serve Application Definition
-  # This section tells Ray Serve what application to run on the cluster.
-  # -------------------------------------------------------------------
   serveConfigV2: |
     applications:
     - name: video_generation_service
@@ -24,11 +20,6 @@ spec:
           TOTAL_WORKERS: "2"
           REDIS_HOST: "172.31.0.181"
           REDIS_PORT: "6379"
-
-  # -------------------------------------------------------------------
-  # Part 2: Ray Cluster Definition
-  # This is the spec for the underlying compute cluster.
-  # -------------------------------------------------------------------
   rayClusterConfig:
     rayVersion: '2.9.3'
     headGroupSpec:
@@ -38,7 +29,8 @@ spec:
         spec:
           containers:
             - name: ray-head
-              image: 172.31.0.182/system_containers/wan22-ray:1026
+              image: 172.31.0.182/system_containers/wan22-ray:1027
+              imagePullPolicy: Always
               ports:
                 - containerPort: 6379
                   name: gcs-server
@@ -48,9 +40,11 @@ spec:
                 requests:
                   cpu: "2"
                   memory: "4Gi"
+                  t7d.com/rdma: "1"
                 limits:
                   cpu: "4"
                   memory: "8Gi"
+                  t7d.com/rdma: "1"
     workerGroupSpecs:
       - groupName: gpu-workers
         replicas: 2
@@ -59,12 +53,24 @@ spec:
         rayStartParams: {}
         template:
           spec:
+            affinity:
+              podAntiAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  - labelSelector:
+                      matchExpressions:
+                        - key: training.kubeflow.org/job-name
+                          operator: In
+                          values:
+                            - wan22-i2v-distributed2-s3
+                    topologyKey: "kubernetes.io/hostname"
             containers:
               - name: ray-worker
-                image: 172.31.0.182/system_containers/wan22-ray:1026
+                image: 172.31.0.182/system_containers/wan22-ray:1027
+                imagePullPolicy: Always
                 resources:
                   requests:
                     cpu: "4"
+                    t7d.com/rdma: "1"
                   limits:
                     cpu: "64"
                     memory: 256Gi

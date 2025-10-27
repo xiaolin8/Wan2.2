@@ -3,24 +3,19 @@ kind: RayCluster
 metadata:
   name: wan22-ray-cluster
 spec:
-  # Ray version should match the version installed in your Docker image
   rayVersion: '2.9.3'
-
-  # -------------------------------------------------------------------
-  # Ray Head Pod Configuration
-  # -------------------------------------------------------------------
   headGroupSpec:
     rayStartParams:
       dashboard-host: '0.0.0.0'
     template:
       spec:
-        serviceAccountName: ray-head-service-account # Example, ensure this SA exists and has permissions to create Pods, Services etc.
+        serviceAccountName: ray-head-service-account
         containers:
           - name: ray-head
             image: 172.31.0.182/system_containers/wan22-ray:1026
             imagePullPolicy: Always
             ports:
-              - containerPort: 6379 # Ray head internal port
+              - containerPort: 6379
                 name: gcs-server
               - containerPort: 8265
                 name: dashboard
@@ -33,18 +28,11 @@ spec:
               limits:
                 cpu: "4"
                 memory: "8Gi"
-
-  # -------------------------------------------------------------------
-  # Ray Worker Pods Configuration
-  # This is the GPU-powered worker pool that will be autoscaled.
-  # -------------------------------------------------------------------
   workerGroupSpecs:
     - groupName: gpu-workers
-      # This is the key for autoscaling. 
-      # We start with 0 replicas, KEDA will scale this up.
       replicas: 0
       minReplicas: 0
-      maxReplicas: 4 # Example max, adjust based on your cluster capacity
+      maxReplicas: 4
       rayStartParams: {}
       template:
         spec:
@@ -64,7 +52,6 @@ spec:
                   memory: 256Gi
                   nvidia.com/gpu: "2"
                   t7d.com/rdma: "1"
-              # Task-specific variables like WAN_FRAME_NUM are omitted as they will be passed dynamically
               env:
                 - name: NVIDIA_VISIBLE_DEVICES
                   value: "all"
@@ -82,7 +69,6 @@ spec:
                     secretKeyRef:
                       name: s3-credentials
                       key: S3_SECRET_KEY
-              # The initContainer-related 'image-volume' is omitted
               volumeMounts:
                 - name: data-volume
                   mountPath: /data/Wan2.2-I2V-A14B

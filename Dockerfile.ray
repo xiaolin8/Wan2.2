@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     vim \
     nano \
     net-tools \
+    iproute2 \
     iputils-ping \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /app/*.md \
