@@ -99,13 +99,13 @@ spec:
                         key: S3_SECRET_KEY
                 volumeMounts:
                   - name: data-volume
-                    mountPath: /data/Wan2.2-I2V-A14B
+                    mountPath: /data/Wan2.2-T2V-A14B
                   - name: dshm
                     mountPath: /dev/shm
             volumes:
               - name: data-volume
                 hostPath:
-                  path: /data/Wan-AI/Wan2.2-I2V-A14B
+                  path: /data/Wan-AI/Wan2.2-T2V-A14B
               - name: dshm
                 emptyDir:
                   medium: Memory

@@ -36,15 +36,15 @@ spec:
                   OUTPUT_PATH="/image-data/input.jpg"
                   if echo "$INPUT_IMAGE_SPEC" | grep -q -E '^https?://'; then
                     echo "Input is a URL. Downloading..."
-                    wget -O "$OUTPUT_PATH" "$INPUT_IMAGE_SPEC"
+                    wget -O "/image-data/input.jpg" "$INPUT_IMAGE_SPEC"
                   elif echo "$INPUT_IMAGE_SPEC" | grep -q '^data:image/'; then
                     echo "Input is a Base64 data URI. Decoding..."
-                    echo "$INPUT_IMAGE_SPEC" | sed 's/^data:image\/[^;]*;base64,//' | base64 -d > "$OUTPUT_PATH"
+                    echo "$INPUT_IMAGE_SPEC" | sed 's/^data:image\/[^;]*;base64,//' | base64 -d > "/image-data/input.jpg"
                   else
                     echo "Error: INPUT_IMAGE_SPEC format not recognized: $INPUT_IMAGE_SPEC" >&2
                     exit 1
                   fi
-                  echo "Image successfully processed and saved to $OUTPUT_PATH"
+                  echo "Image successfully processed and saved to /image-data/input.jpg"
               env:
                 - name: INPUT_IMAGE_SPEC
                   value: "https://cdn.translate.alibaba.com/r/wanx-demo-1.png"
@@ -164,15 +164,15 @@ spec:
                   OUTPUT_PATH="/image-data/input.jpg"
                   if echo "$INPUT_IMAGE_SPEC" | grep -q -E '^https?://'; then
                     echo "Input is a URL. Downloading..."
-                    wget -O "$OUTPUT_PATH" "$INPUT_IMAGE_SPEC"
+                    wget -O "/image-data/input.jpg" "$INPUT_IMAGE_SPEC"
                   elif echo "$INPUT_IMAGE_SPEC" | grep -q '^data:image/'; then
                     echo "Input is a Base64 data URI. Decoding..."
-                    echo "$INPUT_IMAGE_SPEC" | sed 's/^data:image\/[^;]*;base64,//' | base64 -d > "$OUTPUT_PATH"
+                    echo "$INPUT_IMAGE_SPEC" | sed 's/^data:image\/[^;]*;base64,//' | base64 -d > "/image-data/input.jpg"
                   else
                     echo "Error: INPUT_IMAGE_SPEC format not recognized: $INPUT_IMAGE_SPEC" >&2
                     exit 1
                   fi
-                  echo "Image successfully processed and saved to $OUTPUT_PATH"
+                  echo "Image successfully processed and saved to /image-data/input.jpg"
               env:
                 - name: INPUT_IMAGE_SPEC
                   value: "https://cdn.translate.alibaba.com/r/wanx-demo-1.png"

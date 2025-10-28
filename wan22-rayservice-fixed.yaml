@@ -3,23 +3,9 @@ kind: RayService
 metadata:
   name: wan22-rayservice
 spec:
-  serveService:
-    apiVersion: v1
-    kind: Service
-    metadata:
-      name: wan22-rayservice-nodeport
-      namespace: hu
-    spec:
-      type: NodePort
-      ports:
-      - name: serve-api
-        port: 8000
-        targetPort: 8000
-      - name: dashboard
-        port: 8265
-        targetPort: 8265
   rayClusterConfig:
     headGroupSpec:
+      serviceType: NodePort
       rayStartParams:
         dashboard-host: 0.0.0.0
       template:
@@ -28,7 +14,7 @@ spec:
             wan22-app: video-service-head
         spec:
           containers:
-          - image: 172.31.0.182/system_containers/wan22-ray:1026
+          - image: 172.31.0.182/system_containers/wan22-ray:1027
             name: ray-head
             ports:
             - containerPort: 6379
@@ -76,7 +62,7 @@ spec:
                 secretKeyRef:
                   key: S3_SECRET_KEY
                   name: s3-credentials
-            image: 172.31.0.182/system_containers/wan22-ray:1026
+            image: 172.31.0.182/system_containers/wan22-ray:1027
             name: ray-worker
             resources:
               limits:
@@ -117,3 +103,6 @@ spec:
         TOTAL_WORKERS: "2"
         REDIS_HOST: "172.31.0.181"
         REDIS_PORT: "6379"
+        MODEL_PATH: "/data/Wan2.2-T2V-A14B"
+        ULYSSES_SIZE: "4"
+        TASK: "t2v-A14B"
