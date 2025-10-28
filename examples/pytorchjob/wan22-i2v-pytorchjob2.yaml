@@ -23,26 +23,31 @@ spec:
                 topologyKey: "kubernetes.io/hostname"
           initContainers:
             - name: download-image
-              image: 172.31.0.182/system_containers/aws-cli:2.13.0
+              image: 172.31.0.182/system_containers/wan22:1024
               command:
-                - "aws"
-                - "s3"
-                - "--endpoint-url"
-                - "https://s3.cn-north-1.qiniucs.com"
-                - "cp"
-                - "s3://wan22/i2v_input.JPG"
-                - "/image-data/input.jpg"
+                - "/bin/sh"
+                - "-c"
+                - |
+                  set -e
+                  if [ -z "$INPUT_IMAGE_SPEC" ]; then
+                    echo "Error: INPUT_IMAGE_SPEC environment variable is not set." >&2
+                    exit 1
+                  fi
+                  OUTPUT_PATH="/image-data/input.jpg"
+                  if echo "$INPUT_IMAGE_SPEC" | grep -q -E '^https?://'; then
+                    echo "Input is a URL. Downloading..."
+                    wget -O "$OUTPUT_PATH" "$INPUT_IMAGE_SPEC"
+                  elif echo "$INPUT_IMAGE_SPEC" | grep -q '^data:image/'; then
+                    echo "Input is a Base64 data URI. Decoding..."
+                    echo "$INPUT_IMAGE_SPEC" | sed 's/^data:image\/[^;]*;base64,//' | base64 -d > "$OUTPUT_PATH"
+                  else
+                    echo "Error: INPUT_IMAGE_SPEC format not recognized: $INPUT_IMAGE_SPEC" >&2
+                    exit 1
+                  fi
+                  echo "Image successfully processed and saved to $OUTPUT_PATH"
               env:
-                - name: AWS_ACCESS_KEY_ID
-                  valueFrom:
-                    secretKeyRef:
-                      name: s3-credentials
-                      key: S3_ACCESS_KEY
-                - name: AWS_SECRET_ACCESS_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      name: s3-credentials
-                      key: S3_SECRET_KEY
+                - name: INPUT_IMAGE_SPEC
+                  value: "https://cdn.translate.alibaba.com/r/wanx-demo-1.png"
               volumeMounts:
                 - name: image-volume
                   mountPath: /image-data
@@ -146,28 +151,31 @@ spec:
                 topologyKey: "kubernetes.io/hostname"
           initContainers:
             - name: download-image
-              image: 172.31.0.182/system_containers/aws-cli:2.13.0
+              image: 172.31.0.182/system_containers/wan22:1024
               command:
-                - "aws"
-                - "s3"
-                - "--endpoint-url"
-                - "https://s3.cn-north-1.qiniucs.com"
-                - "cp"
-                - "s3://wan22/i2v_input.JPG"
-                - "/image-data/input.jpg"
+                - "/bin/sh"
+                - "-c"
+                - |
+                  set -e
+                  if [ -z "$INPUT_IMAGE_SPEC" ]; then
+                    echo "Error: INPUT_IMAGE_SPEC environment variable is not set." >&2
+                    exit 1
+                  fi
+                  OUTPUT_PATH="/image-data/input.jpg"
+                  if echo "$INPUT_IMAGE_SPEC" | grep -q -E '^https?://'; then
+                    echo "Input is a URL. Downloading..."
+                    wget -O "$OUTPUT_PATH" "$INPUT_IMAGE_SPEC"
+                  elif echo "$INPUT_IMAGE_SPEC" | grep -q '^data:image/'; then
+                    echo "Input is a Base64 data URI. Decoding..."
+                    echo "$INPUT_IMAGE_SPEC" | sed 's/^data:image\/[^;]*;base64,//' | base64 -d > "$OUTPUT_PATH"
+                  else
+                    echo "Error: INPUT_IMAGE_SPEC format not recognized: $INPUT_IMAGE_SPEC" >&2
+                    exit 1
+                  fi
+                  echo "Image successfully processed and saved to $OUTPUT_PATH"
               env:
-                - name: WAN_FRAME_NUM
-                  value: "81"
-                - name: AWS_ACCESS_KEY_ID
-                  valueFrom:
-                    secretKeyRef:
-                      name: s3-credentials
-                      key: S3_ACCESS_KEY
-                - name: AWS_SECRET_ACCESS_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      name: s3-credentials
-                      key: S3_SECRET_KEY
+                - name: INPUT_IMAGE_SPEC
+                  value: "https://cdn.translate.alibaba.com/r/wanx-demo-1.png"
               volumeMounts:
                 - name: image-volume
                   mountPath: /image-data
