@@ -13,6 +13,7 @@ spec:
       dashboard-host: '0.0.0.0'
     template:
       spec:
+        hostPID: true
         affinity:
           podAntiAffinity:
             requiredDuringSchedulingIgnoredDuringExecution:
@@ -39,10 +40,12 @@ spec:
                 containerPort: 10001
             resources:
               limits:
+                cpu: "16"
                 memory: "256Gi"
                 nvidia.com/gpu: "2"
               requests:
-                memory: "16Gi"
+                cpu: "2"
+                memory: "4Gi"
                 nvidia.com/gpu: "2"
             volumeMounts:
               - name: model-storage
@@ -68,6 +71,7 @@ spec:
       rayStartParams: { }
       template:
         spec:
+          hostPID: true
           affinity:
             podAntiAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:
@@ -91,10 +95,12 @@ spec:
                   value: expandable_segments:True
               resources:
                 limits:
-                  memory: 128Gi
+                  cpu: "16"
+                  memory: "256Gi"
                   nvidia.com/gpu: "2"
                 requests:
-                  memory: 128Gi
+                  cpu: "2"
+                  memory: "4Gi"
                   nvidia.com/gpu: "2"
               securityContext:
                 capabilities:

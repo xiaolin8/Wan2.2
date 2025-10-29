@@ -13,6 +13,7 @@ spec:
     headGroupSpec:
       rayStartParams:
         dashboard-host: '0.0.0.0'
+        num-cpus: "0"
       template:
         spec:
           affinity:
@@ -42,10 +43,12 @@ spec:
               resources:
                 limits:
                   memory: "256Gi"
-                  nvidia.com/gpu: "2"
+                  nvidia.com/gpu: "1"
+                  cpu: "8"
                 requests:
                   memory: "16Gi"
-                  nvidia.com/gpu: "2"
+                  nvidia.com/gpu: "1"
+                  cpu: "8"
               volumeMounts:
                 - name: model-storage
                   mountPath: /models

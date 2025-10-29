@@ -72,7 +72,7 @@ REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
   ```python
   # 确保 local_rank 在可用 GPU 范围内
   self.local_rank = self.rank % torch.cuda.device_count()
-  ```
+```
 
 - **语法错误**: `SyntaxError: unterminated string literal (detected at line 159)`
   - 修复: 检查并修复第159行的语法错误，移除多余的引号
