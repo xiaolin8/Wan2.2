@@ -4,7 +4,7 @@ metadata:
   name: wan22-rayjob
 spec:
   entrypoint: python generate_ray.py --task t2v-A14B --size "832*480" --ckpt_dir /models/Wan2.2-T2V-A14B
-    --ulysses_size 4 --prompt "A 15-second cinematic video of an astronaut walking on Mars and discovering a giant stone engraved with 'TenxCloud'."
+    --ulysses_size 4 --prompt "A cinematic video of an astronaut walking on Mars and discovering a giant stone engraved with 'TenxCloud'."
     --save_file /workspace/outputs/$(date '+%Y%m%d%H%M%S')-tenxcloud-from-ray.mp4 --num-workers 4
     --sample_guide_scale 10 --convert_model_dtype --offload_model True --t5_cpu --dit_fsdp
   shutdownAfterJobFinishes: false
