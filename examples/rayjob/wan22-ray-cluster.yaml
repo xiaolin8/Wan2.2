@@ -1,7 +1,7 @@
 apiVersion: ray.io/v1
 kind: RayCluster
 metadata:
-  name: wan22-ray-cluster-2
+  name: wan22-ray-cluster-1
   annotations:
     ray.io/worker-group-idle-timeout-seconds: "600"
 spec:
@@ -60,12 +60,12 @@ spec:
                   value: "true"
               resources:
                 limits:
-                  cpu: "16"
+                  cpu: "8"
                   memory: "256Gi"
                   nvidia.com/gpu: "1"
                   nvidia.com/priority: "0"
                 requests:
-                  cpu: "1"
+                  cpu: "8"
                   memory: "2Gi"
                   nvidia.com/gpu: "1"
                   nvidia.com/priority: "0"
