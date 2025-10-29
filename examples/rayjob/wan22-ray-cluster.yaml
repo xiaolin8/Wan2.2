@@ -14,16 +14,16 @@ spec:
     template:
       spec:
         hostPID: true
-        affinity:
-          podAntiAffinity:
-            requiredDuringSchedulingIgnoredDuringExecution:
-              - labelSelector:
-                  matchExpressions:
-                    - key: ray.io/group
-                      operator: In
-                      values:
-                        - gpu-worker-group
-                topologyKey: kubernetes.io/hostname
+#        affinity:
+#          podAntiAffinity:
+#            requiredDuringSchedulingIgnoredDuringExecution:
+#              - labelSelector:
+#                  matchExpressions:
+#                    - key: ray.io/group
+#                      operator: In
+#                      values:
+#                        - gpu-worker-group
+#                topologyKey: kubernetes.io/hostname
         containers:
           - name: ray-head
             image: 172.31.0.182/system_containers/wan22:1016-ray
@@ -31,6 +31,8 @@ spec:
             env:
               - name: PYTORCH_CUDA_ALLOC_CONF
                 value: expandable_segments:True
+              - name: CUDA_DISABLE_CONTROL
+                value: "true"
             ports:
               - name: gcs-server
                 containerPort: 6379
@@ -43,10 +45,12 @@ spec:
                 cpu: "16"
                 memory: "256Gi"
                 nvidia.com/gpu: "2"
+                nvidia.com/priority: "0"
               requests:
                 cpu: "2"
                 memory: "4Gi"
                 nvidia.com/gpu: "2"
+                nvidia.com/priority: "0"
             volumeMounts:
               - name: model-storage
                 mountPath: /models
@@ -72,16 +76,16 @@ spec:
       template:
         spec:
           hostPID: true
-          affinity:
-            podAntiAffinity:
-              requiredDuringSchedulingIgnoredDuringExecution:
-                - labelSelector:
-                    matchExpressions:
-                      - key: ray.io/group
-                        operator: In
-                        values:
-                          - gpu-worker-group
-                  topologyKey: kubernetes.io/hostname
+#          affinity:
+#            podAntiAffinity:
+#              requiredDuringSchedulingIgnoredDuringExecution:
+#                - labelSelector:
+#                    matchExpressions:
+#                      - key: ray.io/group
+#                        operator: In
+#                        values:
+#                          - gpu-worker-group
+#                  topologyKey: kubernetes.io/hostname
           tolerations:
             - key: "nvidia.com/gpu"
               operator: "Exists"
@@ -93,15 +97,19 @@ spec:
               env:
                 - name: PYTORCH_CUDA_ALLOC_CONF
                   value: expandable_segments:True
+                - name: CUDA_DISABLE_CONTROL
+                  value: "true"
               resources:
                 limits:
                   cpu: "16"
                   memory: "256Gi"
                   nvidia.com/gpu: "2"
+                  nvidia.com/priority: "0"
                 requests:
                   cpu: "2"
                   memory: "4Gi"
                   nvidia.com/gpu: "2"
+                  nvidia.com/priority: "0"
               securityContext:
                 capabilities:
                   add:

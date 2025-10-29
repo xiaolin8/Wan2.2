@@ -1,0 +1,22 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gpu-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gpu-test
+  template:
+    metadata:
+      labels:
+        app: gpu-test
+    spec:
+      containers:
+        - name: nginx
+          image: 172.31.0.182/system_containers/nginx:1.21
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+              nvidia.com/gpumem: "10240"
