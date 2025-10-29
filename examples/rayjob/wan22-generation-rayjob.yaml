@@ -42,10 +42,10 @@ spec:
               resources:
                 limits:
                   memory: "256Gi"
-                  nvidia.com/gpu: "1"
+                  nvidia.com/gpu: "2"
                 requests:
                   memory: "16Gi"
-                  nvidia.com/gpu: "1"
+                  nvidia.com/gpu: "2"
               volumeMounts:
                 - name: model-storage
                   mountPath: /models
