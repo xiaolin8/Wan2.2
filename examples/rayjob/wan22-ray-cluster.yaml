@@ -1,0 +1,111 @@
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: wan22-ray-cluster
+spec:
+  rayVersion: '2.10.0'
+  headGroupSpec:
+    serviceType: NodePort
+    rayStartParams:
+      dashboard-host: '0.0.0.0'
+    template:
+      spec:
+        affinity:
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchExpressions:
+                    - key: ray.io/group
+                      operator: In
+                      values:
+                        - gpu-worker-group
+                topologyKey: kubernetes.io/hostname
+        containers:
+          - name: ray-head
+            image: 172.31.0.182/system_containers/wan22:1016-ray
+            imagePullPolicy: Always
+            env:
+              - name: PYTORCH_CUDA_ALLOC_CONF
+                value: expandable_segments:True
+            ports:
+              - name: gcs-server
+                containerPort: 6379
+              - name: dashboard
+                containerPort: 8265
+              - name: client
+                containerPort: 10001
+            resources:
+              limits:
+                memory: "256Gi"
+                nvidia.com/gpu: "2"
+              requests:
+                memory: "16Gi"
+                nvidia.com/gpu: "2"
+            volumeMounts:
+              - name: model-storage
+                mountPath: /models
+              - name: output-storage
+                mountPath: /workspace/outputs
+        tolerations:
+          - key: "nvidia.com/gpu"
+            operator: "Exists"
+            effect: "NoSchedule"
+        volumes:
+          - name: model-storage
+            hostPath:
+              path: /data/Wan-AI
+          - name: output-storage
+            hostPath:
+              path: /data/Wan-AI/output
+  workerGroupSpecs:
+    - replicas: 1
+      minReplicas: 1
+      maxReplicas: 1
+      groupName: gpu-worker-group
+      rayStartParams: {}
+      template:
+        spec:
+          affinity:
+            podAntiAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchExpressions:
+                      - key: ray.io/group
+                        operator: In
+                        values:
+                          - gpu-worker-group
+                  topologyKey: kubernetes.io/hostname
+          tolerations:
+            - key: "nvidia.com/gpu"
+              operator: "Exists"
+              effect: "NoSchedule"
+          containers:
+            - name: ray-worker
+              image: 172.31.0.182/system_containers/wan22:1016-ray
+              imagePullPolicy: Always
+              env:
+                - name: PYTORCH_CUDA_ALLOC_CONF
+                  value: expandable_segments:True
+              resources:
+                limits:
+                  memory: 128Gi
+                  nvidia.com/gpu: "2"
+                requests:
+                  memory: 128Gi
+                  nvidia.com/gpu: "2"
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
+              volumeMounts:
+                - name: model-storage
+                  mountPath: /models
+                - name: output-storage
+                  mountPath: /workspace/outputs
+          volumes:
+            - name: model-storage
+              hostPath:
+                path: /data/Wan-AI
+            - name: output-storage
+              hostPath:
+                path: /data/Wan-AI/output
