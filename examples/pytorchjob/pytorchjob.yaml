@@ -1,0 +1,27 @@
+apiVersion: "kubeflow.org/v1"
+kind: PyTorchJob
+metadata:
+  name: hunyuan-video-01
+spec:
+  runPolicy:
+    cleanPodPolicy: None
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        spec:
+          containers:
+            - name: hunyuanvideo
+              image: 172.31.0.182/system_containers/hunyuanvideo:cuda_12
+              command:
+                - "/bin/sh"
+                - "-c"
+                - "python sample_video.py --prompt \"A panda is surfing.\" --model_path /data/HunyuanVideo/ckpts --output_dir /data/HunyuanVideo/output"
+              volumeMounts:
+                - name: data
+                  mountPath: /data/HunyuanVideo
+          volumes:
+            - name: data
+              hostPath:
+                path: /data/HunyuanVideo

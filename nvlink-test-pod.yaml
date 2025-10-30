@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nvlink-test-pod
+spec:
+  restartPolicy: Never
+  containers:
+  - name: test
+    image: 172.31.0.182/system_containers/pytorch:2.9.0-cuda12.8-cudnn9-devel
+    command: ["/bin/sh", "-c", "nvidia-smi nvlink -s"]
+    resources:
+      limits:
+        nvidia.com/gpu: "4" # 直接申请1块物理GPU，绕开Hami
+  tolerations:
+  - key: "nvidia.com/gpu"
+    operator: "Exists"
+    effect: "NoSchedule"
