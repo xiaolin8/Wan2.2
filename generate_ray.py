@@ -7,6 +7,10 @@ import warnings
 from datetime import datetime
 import uuid
 import socket
+import urllib.request
+import tempfile
+import base64
+import atexit
 
 warnings.filterwarnings('ignore')
 
@@ -102,6 +106,40 @@ def _validate_args(args):
         assert args.size in SUPPORTED_SIZES[
             args.
             task], f"Unsupport size {args.size} for task {args.task}, supported sizes are: {', '.join(SUPPORTED_SIZES[args.task])}"
+
+def _download_image_if_needed(image_path_or_data):
+    if not image_path_or_data:
+        return None
+
+    if image_path_or_data.startswith('data:image/'):
+        print("Decoding base64 image data.")
+        try:
+            header, encoded = image_path_or_data.split(',', 1)
+            img_format = header.split(';')[0].split('/')[1]
+            data = base64.b64decode(encoded)
+            
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{img_format}') as tmp_file:
+                tmp_file.write(data)
+                atexit.register(os.remove, tmp_file.name)
+                print(f"Image decoded to: {tmp_file.name}")
+                return tmp_file.name
+        except Exception as e:
+            print(f"Error decoding base64 image: {e}")
+            return None
+
+    elif image_path_or_data.startswith(('http://', 'https://')):
+        print(f"Downloading image from URL: {image_path_or_data}")
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp_file:
+                urllib.request.urlretrieve(image_path_or_data, tmp_file.name)
+                atexit.register(os.remove, tmp_file.name)
+                print(f"Image downloaded to: {tmp_file.name}")
+                return tmp_file.name
+        except Exception as e:
+            print(f"Error downloading image: {e}")
+            return None
+            
+    return image_path_or_data
 
 
 def _parse_args():
@@ -601,6 +639,7 @@ def get_free_port():
 
 def main():
     args = _parse_args()
+    args.image = _download_image_if_needed(args.image)
     
     # Initialize Ray
     if not ray.is_initialized():

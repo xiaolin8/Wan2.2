@@ -1,0 +1,12 @@
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: wan22-i2v-rayjob
+spec:
+  entrypoint: python generate_ray.py --task i2v-A14B --size "832*480" --ckpt_dir /models/Wan2.2-I2V-A14B
+    --image "https://cdn.translate.alibaba.com/r/wanx-demo-1.png" --prompt "A beautiful girl"
+    --save_file /workspace/outputs/$(date '+%Y%m%d%H%M%S')-i2v-from-ray.mp4 --num-workers 10
+    --sample_guide_scale 10 --convert_model_dtype --offload_model False --dit_fsdp
+  shutdownAfterJobFinishes: false
+  clusterSelector:
+    ray.io/cluster: wan22-ray-cluster

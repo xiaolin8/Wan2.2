@@ -95,8 +95,6 @@ spec:
                   mountPath: /workspace/outputs
                 - name: dshm
                   mountPath: /dev/shm
-                - name: image-volume
-                  mountPath: /image-data
           volumes:
             - name: model-storage
               hostPath:
@@ -108,5 +106,3 @@ spec:
               emptyDir:
                 medium: Memory
                 sizeLimit: 128Gi
-            - name: image-volume
-              emptyDir: {}

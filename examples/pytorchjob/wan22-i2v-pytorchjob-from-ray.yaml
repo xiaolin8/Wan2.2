@@ -1,0 +1,270 @@
+apiVersion: "kubeflow.org/v1"
+kind: PyTorchJob
+metadata:
+  name: wan22-i2v-pytorchjob-from-ray
+spec:
+  runPolicy:
+    cleanPodPolicy: None
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        spec:
+          affinity:
+            podAntiAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchExpressions:
+                  - key: training.kubeflow.org/job-name
+                    operator: In
+                    values:
+                    - wan22-i2v-pytorchjob-from-ray
+                topologyKey: "kubernetes.io/hostname"
+          initContainers:
+            - name: download-image
+              image: 172.31.0.182/system_containers/wan22:1024
+              command:
+                - "/bin/sh"
+                - "-c"
+                - |
+                  set -e
+                  if [ -z "$INPUT_IMAGE_SPEC" ]; then
+                    echo "Error: INPUT_IMAGE_SPEC environment variable is not set." >&2
+                    exit 1
+                  fi
+                  OUTPUT_PATH="/image-data/input.jpg"
+                  if echo "$INPUT_IMAGE_SPEC" | grep -q -E '^https?://'; then
+                    echo "Input is a URL. Downloading..."
+                    wget -O "/image-data/input.jpg" "$INPUT_IMAGE_SPEC"
+                  elif echo "$INPUT_IMAGE_SPEC" | grep -q '^data:image/'; then
+                    echo "Input is a Base64 data URI. Decoding..."
+                    echo "$INPUT_IMAGE_SPEC" | sed 's/^data:image\/[^;]*;base64,//' | base64 -d > "/image-data/input.jpg"
+                  else
+                    echo "Error: INPUT_IMAGE_SPEC format not recognized: $INPUT_IMAGE_SPEC" >&2
+                    exit 1
+                  fi
+                  echo "Image successfully processed and saved to /image-data/input.jpg"
+              env:
+                - name: INPUT_IMAGE_SPEC
+                  value: "https://cdn.translate.alibaba.com/r/wanx-demo-1.png"
+              volumeMounts:
+                - name: image-volume
+                  mountPath: /image-data
+          containers:
+            - name: pytorch
+              image: 172.31.0.182/system_containers/wan22:1016-ray
+              imagePullPolicy: Always
+              command:
+                - "torchrun"
+              args:
+                - "--nproc_per_node=5"
+                - "generate.py"
+                - "--task"
+                - "i2v-A14B"
+                - "--size"
+                - "832*480"
+                - "--ckpt_dir"
+                - "/models/Wan2.2-I2V-A14B"
+                - "--image"
+                - "/image-data/input.jpg"
+                - "--dit_fsdp"
+                - "--t5_fsdp"
+                - "--convert_model_dtype"
+                - "--ulysses_size"
+                - "4"
+                - "--sample_guide_scale"
+                - "10"
+                - "--prompt"
+                - "A beautiful girl"
+                - "--save_file"
+                - "/output/wan22-i2v-from-ray.mp4"
+                - "--s3_endpoint_url"
+                - "https://s3.cn-north-1.qiniucs.com"
+                - "--s3_bucket"
+                - "wan22"
+                - "--s3_key_prefix"
+                - "wan22-i2v-task-from-ray"
+              resources:
+                requests:
+                  cpu: "8"
+                  memory: "2Gi"
+                  t7d.com/rdma: "1"
+                  nvidia.com/gpu: "5"
+                limits:
+                  cpu: "32"
+                  memory: "256Gi"
+                  t7d.com/rdma: "1"
+                  nvidia.com/gpu: "5"
+              env:
+                - name: WAN_FRAME_NUM
+                  value: "81"
+                - name: NVIDIA_VISIBLE_DEVICES
+                  value: "all"
+                - name: NCCL_IB_DISABLE
+                  value: "0"
+                - name: NCCL_SOCKET_IFNAME
+                  value: "^lo,docker0,veth"
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: s3-credentials
+                      key: S3_ACCESS_KEY
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: s3-credentials
+                      key: S3_SECRET_KEY
+              volumeMounts:
+                - name: model-storage
+                  mountPath: /models
+                - name: output-storage
+                  mountPath: /output
+                - name: dshm
+                  mountPath: /dev/shm
+                - name: image-volume
+                  mountPath: /image-data
+          volumes:
+            - name: model-storage
+              hostPath:
+                path: /data/Wan-AI
+            - name: output-storage
+              hostPath:
+                path: /data/Wan-AI/output
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 128Gi
+            - name: image-volume
+              emptyDir: {}
+    Worker:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        spec:
+          affinity:
+            podAntiAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchExpressions:
+                  - key: training.kubeflow.org/job-name
+                    operator: In
+                    values:
+                    - wan22-i2v-pytorchjob-from-ray
+                topologyKey: "kubernetes.io/hostname"
+          initContainers:
+            - name: download-image
+              image: 172.31.0.182/system_containers/wan22:1024
+              command:
+                - "/bin/sh"
+                - "-c"
+                - |
+                  set -e
+                  if [ -z "$INPUT_IMAGE_SPEC" ]; then
+                    echo "Error: INPUT_IMAGE_SPEC environment variable is not set." >&2
+                    exit 1
+                  fi
+                  OUTPUT_PATH="/image-data/input.jpg"
+                  if echo "$INPUT_IMAGE_SPEC" | grep -q -E '^https?://'; then
+                    echo "Input is a URL. Downloading..."
+                    wget -O "/image-data/input.jpg" "$INPUT_IMAGE_SPEC"
+                  elif echo "$INPUT_IMAGE_SPEC" | grep -q '^data:image/'; then
+                    echo "Input is a Base64 data URI. Decoding..."
+                    echo "$INPUT_IMAGE_SPEC" | sed 's/^data:image\/[^;]*;base64,//' | base64 -d > "/image-data/input.jpg"
+                  else
+                    echo "Error: INPUT_IMAGE_SPEC format not recognized: $INPUT_IMAGE_SPEC" >&2
+                    exit 1
+                  fi
+                  echo "Image successfully processed and saved to /image-data/input.jpg"
+              env:
+                - name: INPUT_IMAGE_SPEC
+                  value: "https://cdn.translate.alibaba.com/r/wanx-demo-1.png"
+              volumeMounts:
+                - name: image-volume
+                  mountPath: /image-data
+          containers:
+            - name: pytorch
+              image: 172.31.0.182/system_containers/wan22:1016-ray
+              imagePullPolicy: Always
+              command:
+                - "torchrun"
+              args:
+                - "--nproc_per_node=5"
+                - "generate.py"
+                - "--task"
+                - "i2v-A14B"
+                - "--size"
+                - "832*480"
+                - "--ckpt_dir"
+                - "/models/Wan2.2-I2V-A14B"
+                - "--image"
+                - "/image-data/input.jpg"
+                - "--dit_fsdp"
+                - "--t5_fsdp"
+                - "--convert_model_dtype"
+                - "--ulysses_size"
+                - "4"
+                - "--sample_guide_scale"
+                - "10"
+                - "--prompt"
+                - "A beautiful girl"
+                - "--save_file"
+                - "/output/wan22-i2v-from-ray.mp4"
+                - "--s3_endpoint_url"
+                - "https://s3.cn-north-1.qiniucs.com"
+                - "--s3_bucket"
+                - "wan22"
+                - "--s3_key_prefix"
+                - "wan22-i2v-task-from-ray"
+              resources:
+                requests:
+                  cpu: "8"
+                  memory: "2Gi"
+                  t7d.com/rdma: "1"
+                  nvidia.com/gpu: "5"
+                limits:
+                  cpu: "32"
+                  memory: "256Gi"
+                  t7d.com/rdma: "1"
+                  nvidia.com/gpu: "5"
+              env:
+                - name: WAN_FRAME_NUM
+                  value: "81"
+                - name: NVIDIA_VISIBLE_DEVICES
+                  value: "all"
+                - name: NCCL_IB_DISABLE
+                  value: "0"
+                - name: NCCL_SOCKET_IFNAME
+                  value: "^lo,docker0,veth"
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: s3-credentials
+                      key: S3_ACCESS_KEY
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: s3-credentials
+                      key: S3_SECRET_KEY
+              volumeMounts:
+                - name: model-storage
+                  mountPath: /models
+                - name: output-storage
+                  mountPath: /output
+                - name: dshm
+                  mountPath: /dev/shm
+                - name: image-volume
+                  mountPath: /image-data
+          volumes:
+            - name: model-storage
+              hostPath:
+                path: /data/Wan-AI
+            - name: output-storage
+              hostPath:
+                path: /data/Wan-AI/output
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 128Gi
+            - name: image-volume
+              emptyDir: {}
