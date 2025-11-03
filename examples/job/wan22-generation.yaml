@@ -2,10 +2,9 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   labels:
-    batch.kubernetes.io/job-name: wan22-generation-job
-    job-name: wan22-generation-job
-  name: wan22-generation-job
-  namespace: hu
+    batch.kubernetes.io/job-name: wan22-generation-job3
+    job-name: wan22-generation-job3
+  name: wan22-generation-job3
 spec:
   backoffLimit: 1
   completionMode: NonIndexed
@@ -17,8 +16,8 @@ spec:
   template:
     metadata:
       labels:
-        batch.kubernetes.io/job-name: wan22-generation-job
-        job-name: wan22-generation-job
+        batch.kubernetes.io/job-name: wan22-generation-job3
+        job-name: wan22-generation-job3
     spec:
       containers:
       - args:
@@ -33,7 +32,6 @@ spec:
             --save_file /workspace/outputs/$(date '+%Y%m%d%H%M%S')-$(OUTPUT_FILENAME) \
             --sample_guide_scale 10 \
             --offload_model True \
-            --t5_cpu \
             --dit_fsdp \
             --t5_fsdp
         command:
@@ -52,7 +50,7 @@ spec:
           value: A 15-second cinematic video of an astronaut walking on Mars and discovering
             a giant stone engraved with 'TenxCloud'.
         - name: OUTPUT_FILENAME
-          value: tenxcloud-from-k8s.mp4
+          value: wan22-generation-job3-11031117.mp4
         image: 172.31.0.182/system_containers/wan2-2:1014
         imagePullPolicy: IfNotPresent
         name: wan22-worker
@@ -60,11 +58,9 @@ spec:
           limits:
             memory: 128Gi
             nvidia.com/gpu: "4"
-            nvidia.com/gpumem: 64k
           requests:
             memory: 128Gi
             nvidia.com/gpu: "4"
-            nvidia.com/gpumem: 64k
         securityContext:
           capabilities:
             add:

@@ -59,6 +59,10 @@ spec:
                   mountPath: /output
                 - name: dshm
                   mountPath: /dev/shm
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
           volumes:
             - name: data-volume
               hostPath:
@@ -123,6 +127,10 @@ spec:
                   mountPath: /output
                 - name: dshm
                   mountPath: /dev/shm
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
           volumes:
             - name: data-volume
               hostPath:

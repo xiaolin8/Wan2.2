@@ -18,7 +18,7 @@
 
 ## 3. 根本原因总结
 
-**Hami 的 vGPU 实现，在为容器提供 CUDA 算力的同时，丢失了物理 GPU 之间底层的 NVLink 拓扑信息。这使得容器内的 NCCL 库无法利用高速的 NVLink 总线进行通信，被迫降级到基于 TCP/IP 的慢速容器网络。对于 FSDP 这类通信密集型的分布式策略，这种降级是致命的，其产生的巨大通信延迟是导致应用性能崩溃的唯一原因。**
+**Hami 的 vGPU 实现，在为容器提供 CUDA 算力的同时，丢失了物理 GPU 之间底层的 NVLink 拓扑信息。这使得容器内的 NCCL 库无法利用高速的 NVLink 总线进行通信，被迫降级到基于 TCP/IP 的慢速容器网络。**
 
 ```yaml
 # nvlink-test-pod.yaml
@@ -40,3 +40,19 @@ spec:
     operator: "Exists"
     effect: "NoSchedule"
 ```
+
+
+
+----
+
+----
+
+## 问题现象：
+
+- **应用类型**: 一个使用 PyTorch FSDP (Fully Sharded Data Parallelism) 策略的文生视频（Text-to-Video）分布式推理任务。
+- **基准性能**: 直接 docker run 执行（单机8卡），只需要 7~8 分钟
+- **观测性能**: 在使用 Hami vGPU 的 k8s 集群上，无论使用 1 个 vGPU 还是 4 个vGPU 甚至 10 个vGPU，完成相同的推理任务耗时均在 **25-30 分钟**左右。性能没有随GPU数量增加而提升，且远慢于基准性能。
+
+## 可能原因：
+
+1. Hami gpu 虚拟化问题

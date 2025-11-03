@@ -30,16 +30,23 @@ spec:
                 cpu: "16"
                 memory: "256Gi"
               requests:
-                cpu: "1"
-                memory: "2Gi"
+                cpu: "4"
+                memory: "8Gi"
+            securityContext:
+              capabilities:
+                add:
+                  - IPC_LOCK
   workerGroupSpecs:
-    - replicas: 2
-      minReplicas: 2
+    - replicas: 1
+      minReplicas: 1
       maxReplicas: 2
       groupName: gpu-worker-group
       rayStartParams: { }
       template:
         spec:
+          # schedulingGates:
+          #   - name: "tenxcloud.com/scheduling-gate"
+          # timeoutSeconds: 600
           tolerations:
             - key: "nvidia.com/gpu"
               operator: "Exists"
@@ -76,13 +83,13 @@ spec:
                   cpu: "32"
                   memory: "256Gi"
                   t7d.com/rdma: "1"
-                  nvidia.com/gpu: "5"
+                  nvidia.com/gpu: "4"
                   nvidia.com/priority: "0"
                 requests:
                   cpu: "8"
                   memory: "2Gi"
                   t7d.com/rdma: "1"
-                  nvidia.com/gpu: "5"
+                  nvidia.com/gpu: "4"
                   nvidia.com/priority: "0"
               securityContext:
                 capabilities:

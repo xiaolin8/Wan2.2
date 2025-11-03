@@ -1,7 +1,7 @@
 apiVersion: ray.io/v1
 kind: RayJob
 metadata:
-  name: wan22-rayjob-2x4
+  name: wan22-rayjob-8
 spec:
   entrypoint: python generate_ray.py --task t2v-A14B --size "832*480" --ckpt_dir /models/Wan2.2-T2V-A14B
     --ulysses_size 8 --prompt "A cinematic video of an astronaut walking on Mars and discovering a giant stone engraved with 'TenxCloud'."
