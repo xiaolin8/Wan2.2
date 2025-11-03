@@ -1,0 +1,36 @@
+# 使用官方的 PyTorch 镜像作为基础，它已包含配置好的 CUDA 和 cuDNN
+FROM pytorch/pytorch:2.9.0-cuda12.8-cudnn9-devel
+
+# 设置环境变量，防止 apt-get 在构建时交互
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# 1. 安装必要的系统依赖
+# ffmpeg 用于 imageio 保存视频
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. 升级 pip 并安装 Diffusers 相关的 Python 依赖
+#    - PyTorch 已由基础镜像提供
+#    - 安装 xformers 以获得最佳性能
+RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir \
+    diffusers \
+    transformers \
+    accelerate \
+    xformers \
+    "imageio[ffmpeg]" \
+    Pillow
+
+# 3. 创建一个非 root 用户来运行应用，增强安全性
+RUN groupadd --gid 1001 appuser && \
+    useradd --uid 1001 --gid 1001 -m -s /bin/bash appuser
+
+# 4. 设置工作目录和用户
+WORKDIR /app
+USER appuser
+
+# 5. 设置默认入口点
+#    - 默认启动一个 bash shell，方便交互式使用或执行指定脚本
+ENTRYPOINT ["/bin/bash"]
