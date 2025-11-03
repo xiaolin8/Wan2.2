@@ -1,0 +1,77 @@
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: wan22-diffusers-job-parametric
+spec:
+  # 使用 > 可以方便地编写多行命令
+  # 在这里你可以像修改配置文件一样修改所有推理参数
+  entrypoint: >
+    python /app/generate_ti2v_parametric.py
+    --model_path /models/Wan2.2-TI2V-5B-Diffusers
+    --input_image /app/inputs/my_image.png
+    --output_path /app/outputs/my_parametric_video.mp4
+    --prompt "A dancing astronaut in the ocean, cinematic style"
+    --negative_prompt "bad quality, worse quality, low resolution"
+    --num_frames 30
+    --num_inference_steps 40
+    --guidance_scale 10.0
+    --seed 1337
+
+  # 任务完成后自动清理资源
+  shutdownAfterJobFinishes: true
+
+  # 定义执行任务所需的 RayCluster
+  rayClusterSpec:
+    headGroupSpec:
+      rayStartParams: {}
+      template:
+        spec:
+          containers:
+            - name: ray-head
+              image: wan22-diffusers-runtime:latest
+              resources:
+                requests:
+                  cpu: "2"
+                  memory: "4Gi"
+
+    workerGroupSpecs:
+      - replicas: 1
+        minReplicas: 1
+        maxReplicas: 1
+        groupName: gpu-group
+        rayStartParams: {}
+        template:
+          spec:
+            nodeSelector:
+              nvidia.com/gpu.present: "true"
+            containers:
+              - name: ray-worker
+                image: wan22-diffusers-runtime:latest
+                resources:
+                  limits:
+                    nvidia.com/gpu: "1" # 此任务需要 1 张 GPU
+                volumeMounts:
+                  - name: model-storage
+                    mountPath: /models/Wan2.2-TI2V-5B-Diffusers
+                  - name: input-storage
+                    mountPath: /app/inputs
+                  - name: output-storage
+                    mountPath: /app/outputs
+                  - name: script-storage
+                    mountPath: /app/generate_ti2v_parametric.py
+                    subPath: generate_ti2v_parametric.py
+
+            volumes:
+              # 这里的 hostPath 是集群节点的物理路径，请确保文件已存在
+              - name: model-storage
+                hostPath:
+                  path: /data/Wan-AI/Wan2.2-TI2V-5B-Diffusers
+              - name: input-storage
+                hostPath:
+                  path: /mnt/project/inputs
+              - name: output-storage
+                hostPath:
+                  path: /mnt/project/outputs
+              - name: script-storage
+                hostPath:
+                  path: /mnt/project/generate_ti2v_parametric.py

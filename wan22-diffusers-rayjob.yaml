@@ -1,0 +1,84 @@
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: wan22-diffusers-batch-job
+spec:
+  # entrypoint 就是在 Ray Cluster 的 Head Pod 中要执行的命令
+  entrypoint: python /app/generate_ti2v.py
+
+  # 任务完成后，自动删除用于执行任务的 RayCluster
+  shutdownAfterJobFinishes: true
+
+  # 定义用于执行此任务的 RayCluster 的规格
+  rayClusterSpec:
+    headGroupSpec:
+      rayStartParams: {}
+      template:
+        spec:
+          containers:
+            - name: ray-head
+              # Head 节点通常不需要 GPU，使用我们构建的镜像即可
+              image: wan22-diffusers-runtime:latest
+              resources:
+                requests:
+                  cpu: "2"
+                  memory: "4Gi"
+                limits:
+                  cpu: "4"
+                  memory: "8Gi"
+
+    workerGroupSpecs:
+      - replicas: 1
+        minReplicas: 1
+        maxReplicas: 1
+        groupName: gpu-group # 定义一个需要 GPU 的 worker 组
+        rayStartParams: {}
+        template:
+          spec:
+            # 确保 Pod 可以被调度到有 NVIDIA GPU 的节点上
+            nodeSelector:
+              nvidia.com/gpu.present: "true"
+            containers:
+              - name: ray-worker
+                # Worker 节点使用我们构建的镜像
+                image: wan22-diffusers-runtime:latest
+                lifecycle:
+                  postStart:
+                    exec:
+                      command: ["/bin/sh", "-c", "ln -s /dev/null /dev/raw1394"]
+                resources:
+                  requests:
+                    cpu: "4"
+                    memory: "16Gi"
+                  limits:
+                    # 为这个 worker 请求 1 张 GPU
+                    nvidia.com/gpu: "1"
+                
+                # --- 核心部分：挂载卷 ---
+                # 这里的路径需要与你的集群节点的实际路径对应
+                volumeMounts:
+                  - name: model-storage
+                    mountPath: /models/Wan2.2-TI2V-5B-Diffusers
+                  - name: input-storage
+                    mountPath: /app/inputs
+                  - name: output-storage
+                    mountPath: /app/outputs
+                  - name: script-storage
+                    mountPath: /app/generate_ti2v.py
+                    subPath: generate_ti2v.py # 挂载文件而不是目录
+
+            volumes:
+              # 定义卷，并将其链接到集群节点上的 hostPath
+              # 注意：这里的 hostPath 是 K8s 集群中节点的路径，你需要确保文件存在于那里
+              - name: model-storage
+                hostPath:
+                  path: /data/Wan-AI/Wan2.2-TI2V-5B-Diffusers
+              - name: input-storage
+                hostPath:
+                  path: /mnt/project/inputs # 假设你的输入文件在节点的 /mnt/project/inputs
+              - name: output-storage
+                hostPath:
+                  path: /mnt/project/outputs # 假设你的输出目录在节点的 /mnt/project/outputs
+              - name: script-storage
+                hostPath:
+                  path: /mnt/project/generate_ti2v.py # 假设你的脚本在节点的 /mnt/project/
