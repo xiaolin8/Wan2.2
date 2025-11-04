@@ -1,0 +1,17 @@
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: wan22-rayjob-diffusers-parametric
+  namespace: hu
+spec:
+  # The entrypoint command to run.
+  # It uses 'accelerate' to launch the distributed script.
+  # All parameters for the generation script are passed here.
+  entrypoint: accelerate launch --config_file /workspace/accelerate_config.yaml --num_machines 2 --num_processes 4 generate_deepspeed_diffusers.py --model_path /models/Wan2.2-T2V-A14B-Diffusers --output_path /workspace/outputs/t2v_parametric.mp4 --prompt 'A futuristic city with flying cars, cinematic, 8k, hyper-realistic' --negative_prompt 'low quality, blurry, cartoon' --num_frames 40 --width 1920 --height 1080 --num_inference_steps 25 --guidance_scale 5.0 --guidance_scale_2 3.5 --seed 2048 --fps 24 --dtype float16 --enable_xformers
+  
+  # If true, the RayCluster will be deleted once the job finishes.
+  shutdownAfterJobFinishes: false
+  
+  # Selects the RayCluster to run this job on.
+  clusterSelector:
+    ray.io/cluster: wan22-ray-cluster
