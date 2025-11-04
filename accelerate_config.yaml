@@ -1,0 +1,35 @@
+# Accelerate 多机多卡配置文件
+# 使用: accelerate launch --config_file accelerate_config.yaml generate_deepspeed_diffusers.py ...
+
+compute_environment: LOCAL_MACHINE
+debug: false
+distributed_type: MULTI_GPU
+downcast_bf16: 'no'
+gpu_ids: all
+machine_rank: 0
+main_process_ip: null
+main_process_port: null
+main_training_function: main
+mixed_precision: fp16
+num_machines: 2  # 设置节点数量
+num_processes: 8  # 设置总进程数（节点数 × 每节点GPU数）
+rdzv_backend: static
+same_network: true
+tpu_env: []
+tpu_use_cluster: false
+tpu_use_sudo: false
+use_cpu: false
+
+# DeepSpeed 配置（可选，用于优化）
+deepspeed_config:
+  deepspeed_multinode_launcher: standard
+  zero3_init_flag: true
+  zero_stage: 3
+  offload_optimizer_device: none
+  offload_param_device: none
+  gradient_clipping: 1.0
+  gradient_accumulation_steps: 1
+  steps_per_print: 1000000
+  train_batch_size: 1
+  train_micro_batch_size_per_gpu: 1
+  wall_clock_breakdown: false
