@@ -43,4 +43,4 @@ WORKDIR /app
 USER 1001
 
 # 设置默认入口点
-ENTRYPOINT ["/bin/bash"]
+CMD ["/bin/bash"]
