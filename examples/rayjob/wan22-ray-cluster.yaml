@@ -14,6 +14,17 @@ spec:
       num-cpus: "0"
     template:
       spec:
+        volumes:
+          - name: model-storage
+            hostPath:
+              path: /data/Wan-AI
+          - name: output-storage
+            hostPath:
+              path: /data/Wan-AI/output
+          - name: dshm
+            emptyDir:
+              medium: Memory
+              sizeLimit: 128Gi
         containers:
           - name: ray-head
             image: 172.31.0.182/system_containers/wan22-diffusers:1104
@@ -36,6 +47,13 @@ spec:
               capabilities:
                 add:
                   - IPC_LOCK
+            volumeMounts:
+              - name: model-storage
+                mountPath: /models
+              - name: output-storage
+                mountPath: /workspace/outputs
+              - name: dshm
+                mountPath: /dev/shm
   workerGroupSpecs:
     - replicas: 1
       minReplicas: 1
