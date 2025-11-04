@@ -1,0 +1,38 @@
+# 1. 使用您指定的、已包含原生模式所有依赖的镜像作为基础
+FROM 172.31.0.182/system_containers/wan22:1016-ray
+
+# 2. 设置环境变量 (可选，但推荐)
+#    - 设置时区为上海
+#    - 指定国内 pip 镜像源以加速
+ENV TZ=Asia/Shanghai
+ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+
+# 3. 切换到 root 用户以执行安装操作
+USER root
+
+# 4. (可选) 更新系统源并安装时区工具
+# RUN apt-get update && apt-get install -y --no-install-recommends tzdata && \
+#     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
+#     rm -rf /var/lib/apt/lists/*
+
+# 5. --- 核心步骤：安装 Diffusers 模式所需的额外依赖 ---
+#    我们假设基础镜像中已包含 transformers, Pillow, imageio 等库。
+#    如果缺失，pip 会自动安装。如果已存在，pip 会根据 diffusers 的需要决定是否升级。
+#    这是最简单且直接的方式。
+RUN pip install --no-cache-dir --upgrade pip -i ${PIP_INDEX_URL} && \
+    pip install --no-cache-dir -i ${PIP_INDEX_URL} \
+    diffusers \
+    transformers \
+    accelerate \
+    xformers \
+    "imageio[ffmpeg]"
+
+# 6. 设置默认工作目录和用户
+#    基础镜像的 WORKDIR 是 /app，我们保持一致
+WORKDIR /app
+#    切换回普通用户，增强安全性
+# USER 1001
+
+# 7. 设置默认入口点
+#    基础镜像没有入口点，我们提供一个，使其可以直接运行或交互
+CMD ["/bin/bash"]

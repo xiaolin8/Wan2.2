@@ -28,7 +28,7 @@ docker build -f Dockerfile.diffusers -t 172.31.0.182/system_containers/wan22-dif
 
 IMAGE_NAME="172.31.0.182/system_containers/wan22-diffusers:1103"
 LOG_FILE="docker-build.log"
-nohup sh -c "{ docker build -f Dockerfile.diffusers.revised . -t \"$IMAGE_NAME\" && docker push \"$IMAGE_NAME\"; } >> \"$LOG_FILE\" 2>&1" &
+nohup sh -c "{ docker build -f Dockerfile.diffusers.hybrid . -t \"$IMAGE_NAME\" && docker push \"$IMAGE_NAME\"; } >> \"$LOG_FILE\" 2>&1" &
 
 ```
 
@@ -49,6 +49,14 @@ nohup sh -c "{ docker build -f Dockerfile.diffusers.revised . -t \"$IMAGE_NAME\"
 # -it        : 启动一个交互式的终端
 # --gpus all : 将宿主机的所有 NVIDIA GPU 挂载到容器中 (必需)
 docker run --rm -it --gpus all wan22-diffusers:latest
+
+docker run -d --gpus all --name wan22 \
+     -v /data/Wan-AI/Wan2.2-T2V-A14B-Diffusers:/Wan2.2-T2V-A14B-Diffusers \
+     -v /data/Wan-AI/Wan2.2-T2V-A14B-Diffusers/output:/workspace/output \
+     172.31.0.182/system_containers/wan22-diffusers:1103 \
+     tail -f /dev/null
+
+docker run --gpus all --name wan22      -v /data/Wan-AI/Wan2.2-T2V-A14B-Diffusers:/Wan2.2-T2V-A14B-Diffusers      -v /data/Wan-AI/Wan2.2-T2V-A14B-Diffusers/output:/workspace/output    wan22-diffusers-final:latest   tail -f /dev/null
 ```
 
 进入容器后，你可以：
@@ -73,10 +81,10 @@ import os
 
 # --- 1. 配置参数 ---
 # 模型在 Docker 镜像中的路径是固定的
-MODEL_PATH = "/app/models/Wan2.2-T2V-A14B-Diffusers"
-OUTPUT_DIR = "/app/outputs" # 将输出保存在容器内的 /app/outputs 目录
+MODEL_PATH = "/Wan2.2-T2V-A14B-Diffusers"
+OUTPUT_DIR = "/workspace/output"
 
-PROMPT = "A beautiful sunset over the ocean, cinematic, 8k, masterpiece"
+PROMPT = "A beautiful sunset over the ocean, cinematic, masterpiece"
 NEGATIVE_PROMPT = "low quality, blurry, watermark, signature, ugly"
 
 # --- 2. 加载并配置模型 ---
@@ -110,7 +118,7 @@ def main():
 
     # --- 4. 保存视频 ---
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    output_path = os.path.join(OUTPUT_DIR, "result.mp4")
+    output_path = os.path.join(OUTPUT_DIR, "diffusers.mp4")
 
     print(f"Saving video to {output_path}...")
     imageio.mimsave(output_path, video_frames, fps=8)

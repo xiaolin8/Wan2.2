@@ -1,0 +1,54 @@
+# 使用您指定的、已被验证可行的基础镜像
+FROM pytorch/pytorch:2.9.0-cuda12.8-cudnn9-devel
+
+# --- 核心修改：设置时区为上海 ---
+ENV TZ=Asia/Shanghai
+
+# 设置环境变量和国内镜像源
+ENV DEBIAN_FRONTEND=noninteractive
+ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+
+# 1. 安装系统依赖，并配置时区
+RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
+    apt-get update && apt-get install -y --no-install-recommends \
+    vim \
+    build-essential \
+    ninja-build \
+    libaio-dev \
+    ffmpeg \
+    tzdata && \
+    # 将系统时区链接到上海时区
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
+    rm -rf /var/lib/apt/lists/*
+
+# 2. 将所有 requirements 文件复制到镜像中
+COPY requirements.txt ./
+
+# 3. 完全复刻原生 @Dockerfile 中的 Python 依赖安装步骤
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel -i ${PIP_INDEX_URL}
+
+RUN grep -v "flash_attn" requirements.txt > requirements_temp.txt && \
+    pip install --no-cache-dir -r requirements_temp.txt -i ${PIP_INDEX_URL}
+
+RUN pip install --no-cache-dir flash-attn --no-build-isolation
+
+RUN pip install --no-cache-dir decord librosa peft -i ${PIP_INDEX_URL}
+# RUN pip install --no-cache-dir -r requirements_s2v.txt -i ${PIP_INDEX_URL}
+RUN pip install --no-cache-dir --upgrade typing-extensions -i ${PIP_INDEX_URL}
+# RUN pip install --no-cache-dir -r requirements_animate.txt -i ${PIP_INDEX_URL}
+
+# 4. 在此稳定环境基础上，追加安装 Diffusers 及其最核心的依赖
+RUN pip install --no-cache-dir -i ${PIP_INDEX_URL} \
+    diffusers \
+    accelerate \
+    "imageio[ffmpeg]" \
+    Pillow
+
+# 5. 创建非 root 用户并设置工作目录
+RUN groupadd --gid 1001 appuser && \
+    useradd --uid 1001 --gid 1001 -m -s /bin/bash appuser
+WORKDIR /app
+USER appuser
+
+# 6. 设置默认入口点
+CMD ["/bin/bash"]
