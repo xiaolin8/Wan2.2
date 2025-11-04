@@ -1,0 +1,46 @@
+# 使用您指定的、已被验证可行的基础镜像
+FROM 172.31.0.182/system_containers/wan22:1016-ray
+
+# 设置环境变量和国内镜像源
+ENV TZ=Asia/Shanghai
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+
+USER root
+
+# 安装系统依赖
+# RUN apt-get update && apt-get install -y --no-install-recommends tzdata && \
+#     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
+#     rm -rf /var/lib/apt/lists/*
+
+# --- 核心修正：精确控制 xformers 和 flash-attn 版本 ---
+
+# 1. 将预先下载好的 xformers wheel 文件复制到镜像的临时目录中
+COPY xformers-0.0.32.post2-cp39-abi3-manylinux_2_28_x86_64.whl /tmp/
+
+# 2. 卸载掉基础镜像中可能存在的、版本不兼容的 flash-attn
+RUN pip uninstall -y flash-attn
+
+# 3. 安装一个 xformers 0.0.32 明确兼容的 flash-attn 版本
+#    根据报错信息，我们需要 <=2.8.2 的版本，这里我们安装 2.8.2
+RUN pip install --no-cache-dir -i ${PIP_INDEX_URL} "flash-attn==2.8.2" --no-build-isolation
+
+# 4. 现在，在安装了正确版本 flash-attn 的基础上，再安装 xformers
+RUN pip install /tmp/xformers-0.0.32.post2-cp39-abi3-manylinux_2_28_x86_64.whl
+
+# 5. 安装其他依赖库
+RUN pip install --no-cache-dir --upgrade pip -i ${PIP_INDEX_URL} && \
+    pip install --no-cache-dir -i ${PIP_INDEX_URL} \
+    diffusers \
+    accelerate \
+    "imageio[ffmpeg]" \
+    Pillow
+
+# 6. 清理临时文件
+RUN rm /tmp/xformers-0.0.32.post2-cp39-abi3-manylinux_2_28_x86_64.whl
+
+# 设置工作目录和用户
+WORKDIR /app
+USER 1001
+
+# 设置默认入口点
+ENTRYPOINT ["/bin/bash"]

@@ -16,8 +16,8 @@ spec:
       spec:
         containers:
           - name: ray-head
-            image: 172.31.0.182/system_containers/wan22:1016-ray
-            imagePullPolicy: IfNotPresent
+            image: 172.31.0.182/system_containers/wan22-diffusers:1104
+            imagePullPolicy: Always
             ports:
               - name: gcs-server
                 containerPort: 6379
@@ -53,8 +53,8 @@ spec:
               effect: "NoSchedule"
           containers:
             - name: ray-worker
-              image: 172.31.0.182/system_containers/wan22:1016-ray
-              imagePullPolicy: IfNotPresent
+              image: 172.31.0.182/system_containers/wan22-diffusers:1104
+              imagePullPolicy: Always
               env:
                 - name: PYTORCH_CUDA_ALLOC_CONF
                   value: expandable_segments:True

@@ -48,7 +48,17 @@ nohup sh -c "{ docker build -f Dockerfile.diffusers.hybrid . -t \"$IMAGE_NAME\" 
 # --rm       : 容器退出后自动删除
 # -it        : 启动一个交互式的终端
 # --gpus all : 将宿主机的所有 NVIDIA GPU 挂载到容器中 (必需)
-docker run --rm -it --gpus all wan22-diffusers:latest
+docker rm -f wan22
+docker run --gpus all --name wan22      -v /data/Wan-AI/Wan2.2-T2V-A14B-Diffusers:/Wan2.2-T2V-A14B-Diffusers      -v /data/Wan-AI/Wan2.2-T2V-A14B-Diffusers/output:/workspace/output    172.31.0.182/system_containers/wan22-diffusers:1104   tail -f /dev/null
+
+75c1d73a7b83
+
+python /tmp/generate_parametric.py \
+        --model_path /Wan2.2-T2V-A14B-Diffusers \
+        --output_path /Wan2.2-T2V-A14B-Diffusers/outputs/t2v_from_cli.mp4 \
+        --prompt "A robot surfing on a wave, cinematic" \
+        --num_frames 30 \
+        --seed 1024
 
 docker run -d --gpus all --name wan22 \
      -v /data/Wan-AI/Wan2.2-T2V-A14B-Diffusers:/Wan2.2-T2V-A14B-Diffusers \
@@ -139,3 +149,6 @@ docker run --rm --gpus all -v $(pwd):/app wan22-diffusers:latest \
 ```
 
 执行完毕后，你会在本地当前目录下的 `outputs` 文件夹里找到生成的 `result.mp4` 文件。
+
+![image-20251104102543263](assets/image-20251104102543263.png)
+
