@@ -4,7 +4,7 @@ metadata:
   name: wan22-rayjob-4-1104-diffusers-final
   namespace: hu
 spec:
-  entrypoint: python generate_parametric.py --model_path /models/Wan2.2-T2V-A14B-Diffusers --output_path /workspace/outputs/t2v_from_cli.mp4 --prompt 'A robot surfing on a wave, cinematic' --num_frames 30 --seed 1024
+  entrypoint: python generate_distributed_multi_node.py --model_path /models/Wan2.2-T2V-A14B-Diffusers --output_path /workspace/outputs/t2v_from_cli.mp4 --prompt 'A robot surfing on a wave, cinematic' --num_frames 30 --seed 1024 --num_nodes 2 --gpus_per_node 2
   shutdownAfterJobFinishes: false
   clusterSelector:
     ray.io/cluster: wan22-ray-cluster
