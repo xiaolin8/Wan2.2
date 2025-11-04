@@ -6,7 +6,7 @@ Wan2.2-T2V-A14B-Diffusers 视频生成脚本
 
 import torch
 import numpy as np
-from modelscope import WanPipeline, AutoencoderKLWan
+from diffusers import WanPipeline, AutoencoderKLWan
 from diffusers.utils import export_to_video, load_image
 import argparse
 import os
