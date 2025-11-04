@@ -1,0 +1,10 @@
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: wan22-diffusers-2x2-hu
+  namespace: hu
+spec:
+  entrypoint: python /workspace/generate_deepspeed_diffusers.py --model_path /models/Wan2.2-T2V-A14B-Diffusers --output_path /workspace/outputs/t2v_from_hu.mp4 --prompt 'A robot surfing on a wave, cinematic' --num_frames 16 --num_inference_steps 20 --seed 1024
+  shutdownAfterJobFinishes: false
+  clusterSelector:
+    ray.io/cluster: wan22-ray-cluster
