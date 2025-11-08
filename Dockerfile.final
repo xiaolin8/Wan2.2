@@ -31,7 +31,7 @@ RUN pip install --no-cache-dir \
     --index-url https://download.pytorch.org/whl/cu121
 
 # 7. 从国内镜像源安装其他所有依赖，并固定版本
-RUN pip install --no-cache-dir -i ${PIP_INDEX_URL} \
+RUN pip install --no-cache-dir --no-build-isolation -i ${PIP_INDEX_URL} \
     'diffusers==0.29.0' \
     'transformers==4.41.2' \
     'accelerate==0.30.1' \
