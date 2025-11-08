@@ -1,0 +1,37 @@
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: wan22-t2v-job
+spec:
+  shutdownAfterJobFinishes: true
+  entrypoint: python generate_parametric.py --model_path /Wan2.2-T2V-A14B-Diffusers --output_path /Wan2.2-T2V-A14B-Diffusers/outputs/t2v_from_cli.mp4 --prompt "马斯克在火星上骑马散步，电影级画面" --num_frames 30 --seed 1024
+  rayClusterSpec:
+    headGroupSpec:
+      rayStartParams:
+        dashboard-host: '0.0.0.0'
+      template:
+        spec:
+          containers:
+          - name: ray-head-gpu
+            image: 172.31.0.182/system_containers/wan22-diffusers:1104
+            resources:
+              requests:
+                cpu: "2"
+                memory: "16Gi"
+                nvidia.com/gpu: "1"
+              limits:
+                nvidia.com/gpu: "1"
+            volumeMounts:
+            - name: model-data
+              mountPath: /Wan2.2-T2V-A14B-Diffusers
+            - name: dshm
+              mountPath: /dev/shm
+          volumes:
+          - name: model-data
+            hostPath:
+              path: /data/Wan-AI/Wan2.2-T2V-A14B-Diffusers
+              type: Directory
+          - name: dshm
+            emptyDir:
+              medium: Memory
+              sizeLimit: 128Gi

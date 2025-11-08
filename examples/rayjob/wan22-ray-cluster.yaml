@@ -27,7 +27,7 @@ spec:
               sizeLimit: 128Gi
         containers:
           - name: ray-head
-            image: 172.31.0.182/system_containers/wan22-diffusers:1104
+            image: 172.31.0.182/system_containers/wan22:1016-ray
             imagePullPolicy: Always
             ports:
               - name: gcs-server
@@ -71,7 +71,7 @@ spec:
               effect: "NoSchedule"
           containers:
             - name: ray-worker
-              image: 172.31.0.182/system_containers/wan22-diffusers:1104
+              image: 172.31.0.182/system_containers/wan22:1016-ray
               imagePullPolicy: Always
               env:
                 - name: PYTORCH_CUDA_ALLOC_CONF

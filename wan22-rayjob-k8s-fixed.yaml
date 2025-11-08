@@ -1,0 +1,55 @@
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: wan22-rayjob-diffusers-k8s-fixed
+  namespace: hu
+spec:
+  # 使用新的 Kubernetes 环境配置
+  entrypoint: |
+    # 设置网络环境变量
+    export NCCL_SOCKET_IFNAME=eth0,eno1,ens,ib
+    export NCCL_IB_DISABLE=0
+    export NCCL_DEBUG=INFO
+    export NCCL_MIN_NRINGS=1
+    export NCCL_MAX_NRINGS=4
+    export NCCL_TOPO_DUMP=0
+    
+    # 设置 PyTorch 分布式环境
+    export MASTER_ADDR=$(hostname -I | awk '{print $1}')
+    export MASTER_PORT=29500
+    export RAY_CLUSTER_ADDRESS=$(python -c "import os; print(os.environ.get('RAY_CLUSTER_ADDRESS', 'localhost'))")
+    
+    # 启动分布式推理
+    accelerate launch \
+      --config_file /workspace/accelerate_config_k8s.yaml \
+      --num_machines 1 \
+      --num_processes 4 \
+      --machine_rank 0 \
+      generate_deepspeed_diffusers.py \
+      --model_path /models/Wan2.2-T2V-A14B-Diffusers \
+      --output_path /workspace/outputs/t2v_k8s_fixed.mp4 \
+      --prompt 'A futuristic city with flying cars, cinematic, 8k, hyper-realistic' \
+      --negative_prompt 'low quality, blurry, cartoon, artifacts' \
+      --num_frames 30 \
+      --width 1280 \
+      --height 720 \
+      --num_inference_steps 25 \
+      --guidance_scale 5.0 \
+      --guidance_scale_2 3.5 \
+      --seed 2048 \
+      --fps 16 \
+      --dtype float16 \
+      --enable_xformers
+  
+  # 任务完成后不删除 RayCluster（便于调试）
+  shutdownAfterJobFinishes: false
+  
+  # 选择要运行的 RayCluster
+  clusterSelector:
+    ray.io/cluster: wan22-ray-cluster
+  
+  # 添加重试策略
+  backoffLimit: 3
+  
+  # 任务超时设置（2小时）
+  activeDeadlineSeconds: 7200

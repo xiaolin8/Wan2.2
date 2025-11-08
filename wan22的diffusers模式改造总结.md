@@ -87,7 +87,7 @@
     # 注入云存储凭证
     # export AWS_ACCESS_KEY_ID=...
     # export AWS_SECRET_ACCESS_KEY=...
-
+    
     docker run --rm --gpus all \
       -e AWS_ACCESS_KEY_ID \
       -e AWS_SECRET_ACCESS_KEY \
@@ -108,3 +108,5 @@
 ## 6. 总结
 
 通过本次改造，我们成功地将 `Wan2.2` 模型从一个与框架紧密耦合的原生实现，转换为了一个基于 `diffusers` 标准库的、灵活、健壮且功能完备的生产级工作流。这个过程不仅解决了最初的兼容性问题，还为项目带来了更高的可维护性、可扩展性和行业生态兼容性，为后续的开发和部署铺平了道路。
+
+![image-20251105134305532](assets/image-20251105134305532.png)

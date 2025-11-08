@@ -13,6 +13,9 @@ from diffusers.utils import export_to_video
 import argparse
 import os
 
+# Force network interface for torch.distributed to bypass environment propagation issues
+os.environ['NCCL_SOCKET_IFNAME'] = '^lo,docker0,veth'
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Run Wan2.2-T2V-A14B-Diffusers Parametric Inference")
     

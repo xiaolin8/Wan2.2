@@ -67,9 +67,9 @@ spec:
   workerGroupSpecs:
   - groupName: gpu-worker-group
     maxReplicas: 2
-    minReplicas: 1
+    minReplicas: 2
     rayStartParams: {}
-    replicas: 1
+    replicas: 2
     template:
       spec:
         containers:
@@ -99,13 +99,13 @@ spec:
             limits:
               cpu: "32"
               memory: 256Gi
-              nvidia.com/gpu: "4"
+              nvidia.com/gpu: "2"
               nvidia.com/priority: "0"
               t7d.com/rdma: "1"
             requests:
               cpu: "8"
               memory: 2Gi
-              nvidia.com/gpu: "4"
+              nvidia.com/gpu: "2"
               nvidia.com/priority: "0"
               t7d.com/rdma: "1"
           securityContext:
@@ -119,6 +119,9 @@ spec:
             name: output-storage
           - mountPath: /dev/shm
             name: dshm
+          - name: accelerate-config-volume
+            mountPath: /workspace/accelerate_config.yaml
+            subPath: accelerate_config.yaml
         tolerations:
         - effect: NoSchedule
           key: nvidia.com/gpu
@@ -134,3 +137,6 @@ spec:
             medium: Memory
             sizeLimit: 128Gi
           name: dshm
+        - name: accelerate-config-volume
+          configMap:
+            name: accelerate-config

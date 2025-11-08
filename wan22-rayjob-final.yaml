@@ -1,0 +1,60 @@
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: wan22-rayjob-k8s-fully-fixed
+  namespace: hu
+spec:
+  # 使用修复后的脚本和配置
+  entrypoint: |
+    # 网络环境设置
+    echo "=== 网络环境初始化 ==="
+    export NCCL_SOCKET_IFNAME=eth0,eno1,ens,ib
+    export NCCL_IB_DISABLE=0
+    export NCCL_DEBUG=INFO
+    export NCCL_MIN_NRINGS=1
+    export NCCL_MAX_NRINGS=4
+    
+    # PyTorch 设置
+    export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+    export OMP_NUM_THREADS=4
+    
+    # 检查网络连接
+    echo "网络连接检查:"
+    hostname -I || echo "无法获取本机IP"
+    ip route | grep default || echo "无法获取默认路由"
+    
+    # 运行网络诊断
+    echo "运行网络诊断..."
+    python3 /workspace/network_diagnostic.py
+    
+    # 启动推理任务（不使用 accelerate，使用简化版本）
+    echo "开始视频生成任务..."
+    python3 generate_k8s_fixed.py \
+      --model_path /models/Wan2.2-T2V-A14B-Diffusers \
+      --output_path /workspace/outputs/t2v_final.mp4 \
+      --prompt 'A futuristic city with flying cars, cinematic, 8k, hyper-realistic' \
+      --negative_prompt 'low quality, blurry, cartoon, artifacts, distorted' \
+      --num_frames 30 \
+      --width 1280 \
+      --height 720 \
+      --num_inference_steps 25 \
+      --guidance_scale 5.0 \
+      --guidance_scale_2 3.5 \
+      --seed 2048 \
+      --fps 16 \
+      --dtype float16 \
+      --enable_xformers \
+      --enable_cpu_offload
+  
+  # 任务完成后不删除 RayCluster
+  shutdownAfterJobFinishes: false
+  
+  # 选择 RayCluster
+  clusterSelector:
+    ray.io/cluster: wan22-ray-cluster
+  
+  # 重试设置
+  backoffLimit: 2
+  
+  # 超时设置（3小时）
+  activeDeadlineSeconds: 10800

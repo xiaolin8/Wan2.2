@@ -1,0 +1,33 @@
+# Accelerate Kubernetes/Ray 环境配置文件
+# 专门针对 RayJob 在 Kubernetes 集群中的分布式训练
+
+compute_environment: OCI
+distributed_type: MULTI_GPU
+machine_rank: 0
+main_process_ip: null
+main_process_port: null
+main_training_function: main
+num_machines: 1  # RayJob 中每个 Pod 视为一个机器
+num_processes: 4  # 与 GPU 数量匹配
+mixed_precision: fp16
+downcast_bf16: 'no'
+use_cpu: false
+gpu_ids: all
+
+# 关键的 Kubernetes 分布式设置
+same_network: false  # RayJob 环境 Pod 可能在不同节点
+tpu_env: []
+tpu_use_cluster: false
+tpu_use_sudo: false
+debug: false
+
+# DeepSpeed 配置（可选）
+deepspeed_config:
+  zero_stage: 2
+  gradient_accumulation_steps: 1
+  train_batch_size: 1
+  train_micro_batch_size_per_gpu: 1
+  zero_optimization:
+    stage: 2
+    offload_optimizer: false
+    offload_param: false

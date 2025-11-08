@@ -48,15 +48,34 @@ nohup sh -c "{ docker build -f Dockerfile.diffusers.hybrid . -t \"$IMAGE_NAME\" 
 # --rm       : 容器退出后自动删除
 # -it        : 启动一个交互式的终端
 # --gpus all : 将宿主机的所有 NVIDIA GPU 挂载到容器中 (必需)
-docker rm -f wan22
-docker run --gpus all --name wan22      -v /data/Wan-AI/Wan2.2-T2V-A14B-Diffusers:/Wan2.2-T2V-A14B-Diffusers      -v /data/Wan-AI/Wan2.2-T2V-A14B-Diffusers/output:/workspace/output    172.31.0.182/system_containers/wan22-diffusers:1104   tail -f /dev/null
+docker rm -f wan22 && docker run --rm \
+--gpus '"device=1"' \
+-e NVIDIA_VISIBLE_DEVICES=0 \
+--name wan22 \
+-v /data/Wan-AI/Wan2.2-T2V-A14B-Diffusers:/Wan2.2-T2V-A14B-Diffusers \
+-v /data/Wan-AI/Wan2.2-T2V-A14B-Diffusers/output:/workspace/output \
+172.31.0.182/system_containers/wan22-diffusers:1104 \
+python generate_parametric.py \
+        --model_path /Wan2.2-T2V-A14B-Diffusers \
+        --output_path /Wan2.2-T2V-A14B-Diffusers/outputs/t2v_from_cli.mp4 \
+        --prompt "马斯克在火星上骑马散步，电影级画面" \
+        --num_frames 30 \
+        --seed 1024
+
+docker rm -f huanyuan3d && docker run --gpus all \
+  -p 8080:8080 \
+  --name huanyuan3d \
+  -v /data/Hunyuan3D-2/models:/app/Hunyuan3D-2/models \
+  -v /data/Hunyuan3D-2/output:/app/Hunyuan3D-2/output \
+  -v /data/Hunyuan3D-2/assets:/app/Hunyuan3D-2/assets \
+  172.31.0.182/system_containers/hunyuan3d-2:1105
 
 75c1d73a7b83
 
 python /tmp/generate_parametric.py \
         --model_path /Wan2.2-T2V-A14B-Diffusers \
         --output_path /Wan2.2-T2V-A14B-Diffusers/outputs/t2v_from_cli.mp4 \
-        --prompt "A robot surfing on a wave, cinematic" \
+        --prompt "马斯克在火星上骑马散步，电影级画面" \
         --num_frames 30 \
         --seed 1024
 
