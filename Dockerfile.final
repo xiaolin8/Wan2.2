@@ -5,12 +5,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Shanghai
 ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 
+# 3. 安装系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.10 \
+    python3.10-dev \
     python3.10-venv \
     python3-pip \
     ffmpeg \
     git \
+    ninja-build \
     tzdata && \
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
     rm -rf /var/lib/apt/lists/*
@@ -27,9 +30,12 @@ RUN pip install --no-cache-dir \
     'torchaudio==2.4.0' \
     --index-url https://download.pytorch.org/whl/cu121
 
-# 安装 flash-attn 等软件包的构建时依赖
-RUN pip install --no-cache-dir --no-build-isolation -i ${PIP_INDEX_URL} \
-    'packaging'
+# 7. 安装 flash-attn 等软件包的构建时依赖
+RUN pip install --no-cache-dir -i ${PIP_INDEX_URL} \
+    'packaging' \
+    'wheel' \
+    'setuptools' \
+    'psutil'
 
 # 从国内镜像源安装其他所有依赖，并固定版本
 RUN pip install --no-cache-dir --no-build-isolation -i ${PIP_INDEX_URL} \
