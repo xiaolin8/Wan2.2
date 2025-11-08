@@ -1,10 +1,10 @@
 apiVersion: ray.io/v1
 kind: RayJob
 metadata:
-  name: wan22-t2v-job
+  name: wan22-t2v-job-2
 spec:
   shutdownAfterJobFinishes: true
-  entrypoint: python generate_parametric.py --model_path /Wan2.2-T2V-A14B-Diffusers --output_path /Wan2.2-T2V-A14B-Diffusers/outputs/$(date '+%Y%m%d%H%M%S')-diffusers.mp4 --prompt "马斯克在火星上骑马散步，电影级画面" --num_frames 30 --seed 1024
+  entrypoint: python generate_parametric.py --model_path /Wan2.2-T2V-A14B-Diffusers --output_path /Wan2.2-T2V-A14B-Diffusers/outputs/$(date '+%Y%m%d%H%M%S')-diffusers.mp4 --prompt "马斯克在火星上骑马散步，电影级画面" --num_frames 33 --seed 1024
   rayClusterSpec:
     headGroupSpec:
       rayStartParams:
@@ -18,9 +18,9 @@ spec:
               requests:
                 cpu: "2"
                 memory: "16Gi"
-                nvidia.com/gpu: "1"
+                nvidia.com/gpu: "2"
               limits:
-                nvidia.com/gpu: "1"
+                nvidia.com/gpu: "2"
             volumeMounts:
             - name: model-data
               mountPath: /Wan2.2-T2V-A14B-Diffusers

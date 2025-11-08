@@ -1,5 +1,5 @@
 # 1. 从一个干净、官方、包含编译工具的 NVIDIA 镜像开始
-FROM nvidia/cuda:12.1.1-devel-ubuntu22.04 AS builder
+FROM 172.31.0.182/system_containers/cuda:12.1.1-devel-ubuntu22.04 AS builder
 
 # 2. 设置国内镜像源和环境变量
 RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
@@ -43,7 +43,7 @@ RUN pip install --no-cache-dir -i ${PIP_INDEX_URL} \
     'redis' # <-- 新增 boto3 和 redis
 
 # --- Stage 2: Final Image ---
-FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
+FROM 172.31.0.182/system_containers/cuda:12.1.1-runtime-ubuntu22.04
 
 ENV PATH="/opt/venv/bin:$PATH"
 ENV TZ=Asia/Shanghai
