@@ -20,11 +20,11 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 RUN pip install --no-cache-dir --upgrade pip -i ${PIP_INDEX_URL}
 
-# 从 PyTorch 官方源安装确定兼容的 torch, torchvision, 和 torchaudio
+# 6. 从 PyTorch 官方源安装确定兼容的 torch, torchvision, 和 torchaudio
 RUN pip install --no-cache-dir \
     'torch==2.4.0' \
     'torchvision==0.19.0' \
-    'torchaudio==2.3.0' \
+    'torchaudio==2.4.0' \
     --index-url https://download.pytorch.org/whl/cu121
 
 # 安装 flash-attn 等软件包的构建时依赖
